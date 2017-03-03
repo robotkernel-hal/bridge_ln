@@ -7,15 +7,16 @@
 #include "ln.h"
 #include "ln_cppwrapper.h"
 #include "robotkernel/bridge_interface.h"
+#include "robotkernel/bridge_base.h"
 
 namespace ln_bridge {
 
 class service;
 
-class client : robotkernel::CommBridgeInterface{
+class client : public robotkernel::bridge_base, robotkernel::CommBridgeInterface{
     public:
         //! construct ln_bridge client
-        client();
+        client(const char*& bridgename, YAML::Node& node);
 
         //! destruct ln_bridge client
         ~client();

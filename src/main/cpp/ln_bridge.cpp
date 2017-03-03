@@ -1,4 +1,4 @@
-#include "robotkernel/ln_bridge.h"
+#include "ln_bridge.h"
 #include "robotkernel/helpers.h"
 #include "robotkernel/service.h"
 #include "robotkernel/rk_type.h"
@@ -55,7 +55,7 @@ static bool ends_with(const string& a, const string& b) {
 }
         
 //! construct ln_bridge client
-ln_bridge::client::client() {
+ln_bridge::client::client(const char*& bridgename, YAML::Node& node) : bridge_base(bridgename, "bridge_ln", node) {
     char *argv[] = { 
         (char *)"test", (char *)"-ln_manager", (char *)"192.168.131.1:54411" };
     clnt = new ln::client("hallo", 3, argv);
