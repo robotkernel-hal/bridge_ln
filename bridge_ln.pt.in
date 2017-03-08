@@ -1,0 +1,13 @@
+PTVERSION           = 2
+NAME                = @PACKAGE@
+VERSION             = @PACKAGE_VERSION@
+DESCRIPTION         = robotkernel @PACKAGE@
+MAINTAINER          = @MAINTAINER@
+DOCUMENTATION       = https://rmintra01.robotic.dlr.de/wiki/Robotkernel/@PACKAGE@
+DEPENDS             = interface_canopen_protocol==@INTERFACE_CANOPEN_PROTOCOL_VERSION@, interface_process_data_inspection==@INTERFACE_PROCESS_DATA_INSPECTION_VERSION@, interface_memory_inspection==@INTERFACE_MEMORY_INSPECTION_VERSION@, interface_key_value==@INTERFACE_KEY_VALUE_VERSION@, interface_file_protocol==@INTERFACE_FILE_PROTOCOL_VERSION@
+ARCHS               = @ARCHS@
+
+[install]
+build/${ARCH}/install/lib => lib/${ARCH}
+doc/ => doc/
+share/ => share/
