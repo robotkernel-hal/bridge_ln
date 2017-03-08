@@ -73,13 +73,13 @@ ln_bridge::client::client(const char*& bridgename, YAML::Node& node) : bridge_ba
 		clnt->handle_service_group_in_thread_pool(NULL, "main");
 		clnt->set_max_threads("main", 2);
 
-		robotkernel::service_provider_t *sp = 
-			new robotkernel::service_provider_t();
+		robotkernel::bridge::cbs_t *sp = 
+			new robotkernel::bridge::cbs_t();
 		sp->add_service = std::bind(&ln_bridge::client::addService, this, _1);
 		sp->remove_service = 
 			std::bind(&ln_bridge::client::removeService, this, _1);
 
-		robotkernel::kernel::get_instance()->add_service_provider(sp);
+		robotkernel::kernel::get_instance()->add_bridge_cbs(sp);
 	}
 }
 
