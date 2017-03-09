@@ -56,6 +56,8 @@ class service {
         ~service();
 
         void _create_ln_message_defition();
+        void _process_node(const YAML::Node& node,
+                std::stringstream& ss_md, std::stringstream& ss_signature);
 
         ln_bridge::client& _clnt;
         const robotkernel::service_t& _svc;

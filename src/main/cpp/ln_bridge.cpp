@@ -335,6 +335,62 @@ int ln_bridge::service::handle(ln::service_request& req) {
 	return 0;
 }
 
+void ln_bridge::service::_process_node(const YAML::Node& node,
+        std::stringstream& ss_md, std::stringstream& ss_signature) {
+    for (YAML::const_iterator it = node.begin(); 
+            it != node.end(); ++it) {
+        if (it != node.begin())
+            ss_signature << ",";
+
+        string key   = it->first.as<string>();
+        string value = it->second.as<string>();
+        if (boost::starts_with(key, "vector")) {
+            const size_t equals_idx = key.find_first_of('/');
+            if (std::string::npos != equals_idx)
+            {
+                //signature "uint32_t 4 1,[uint32_t 4 1,char* 1 1]* 8 1|uint32_t 4 1,[uint32_t 4 1,char* 1 1]* 8 1"
+
+                string vector = key.substr(0, equals_idx);
+                string real_key = key.substr(equals_idx + 1);
+
+                ss_signature << "uint32_t 4 1,[";
+
+                string ln_dt = service_datatype_to_ln(real_key);
+                int ln_dt_size = ln_datatype_size(ln_dt);
+
+                stringstream ss_sub_md;
+                ss_sub_md << ln_dt << " data" << endl;//<< real_key << endl;
+                sub_mds[key] = ss_sub_md.str();
+
+                ss_md << "define " << key << " as \"gen/" << key << "\"" << endl;
+                ss_md << key << "* " << value << endl;
+
+                if (ends_with(ln_dt, string("*")))
+                    ss_signature << "uint32_t 4 1,";
+
+                ss_signature << ln_dt << " " << ln_dt_size << " " << "1";
+
+                ss_signature << "]* " << sizeof(void*) << " 1";
+
+            }
+            else
+            {
+                //name = name_value;
+                cout << "error after vector" << endl;
+            }
+        } else {
+            string ln_dt = service_datatype_to_ln(key);
+            int ln_dt_size = ln_datatype_size(ln_dt);
+            ss_md << ln_dt << " " << value << endl;
+
+            if (ends_with(ln_dt, string("*")))
+                ss_signature << "uint32_t 4 1,";
+
+            ss_signature << ln_dt << " " << ln_dt_size << " " << "1";
+        }
+    }
+}
+
 void ln_bridge::service::_create_ln_message_defition() {
 	std::stringstream ss_md, ss_signature;
 	YAML::Node message_definition = YAML::Load(_svc.service_definition);
@@ -344,86 +400,17 @@ void ln_bridge::service::_create_ln_message_defition() {
 		ss_md << "request" << endl;
 
 		const YAML::Node& request = message_definition["request"];
-		for (YAML::const_iterator it = request.begin(); 
-				it != request.end(); ++it) {
-			if (it != request.begin())
-				ss_signature << ",";
-
-			string key   = it->first.as<string>();
-			string value = it->second.as<string>();
-
-			string ln_dt = service_datatype_to_ln(key);
-			int ln_dt_size = ln_datatype_size(ln_dt);
-			ss_md << ln_dt << " " << value << endl;
-
-			if (ends_with(ln_dt, string("*")))
-				ss_signature << "uint32_t 4 1,";
-
-			ss_signature << ln_dt << " " << ln_dt_size << " " << "1";
-		}
+        _process_node(request, ss_md, ss_signature);
 	}
 
 	ss_signature << "|";
 
 	if (message_definition["response"]) {
 		ss_md << "response" << endl;
-
 		const YAML::Node& response = message_definition["response"];
-		for (YAML::const_iterator it = response.begin(); 
-				it != response.end(); ++it) {
-			if (it != response.begin())
-				ss_signature << ",";
-
-			string key   = it->first.as<string>();
-			string value = it->second.as<string>();
-			if (boost::starts_with(key, "vector")) {
-				const size_t equals_idx = key.find_first_of('/');
-				if (std::string::npos != equals_idx)
-				{
-					//signature "uint32_t 4 1,[uint32_t 4 1,char* 1 1]* 8 1|uint32_t 4 1,[uint32_t 4 1,char* 1 1]* 8 1"
-
-					string vector = key.substr(0, equals_idx);
-					string real_key = key.substr(equals_idx + 1);
-
-					ss_signature << "uint32_t 4 1,[";
-
-					string ln_dt = service_datatype_to_ln(real_key);
-					int ln_dt_size = ln_datatype_size(ln_dt);
-
-					stringstream ss_sub_md;
-					ss_sub_md << ln_dt << " " << real_key << endl;
-					sub_mds[key] = ss_sub_md.str();
-
-					ss_md << "define " << key << " as \"gen/" << key << "\"" << endl;
-					ss_md << key << "* " << value << endl;
-
-					if (ends_with(ln_dt, string("*")))
-						ss_signature << "uint32_t 4 1,";
-
-					ss_signature << ln_dt << " " << ln_dt_size << " " << "1";
-
-					ss_signature << "]* " << sizeof(void*) << " 1";
-
-				}
-				else
-				{
-					//name = name_value;
-					cout << "error after vector" << endl;
-				}
-			} else {
-				string ln_dt = service_datatype_to_ln(key);
-				int ln_dt_size = ln_datatype_size(ln_dt);
-				ss_md << ln_dt << " " << value << endl;
-
-				if (ends_with(ln_dt, string("*")))
-					ss_signature << "uint32_t 4 1,";
-
-				ss_signature << ln_dt << " " << ln_dt_size << " " << "1";
-			}
-		}
+        _process_node(response, ss_md, ss_signature);
 	}
 
-	//    cout << "sig: " << ss_signature.str() << endl << "md: " << ss_md.str() << endl;
 	signature = ss_signature.str();
 	md = ss_md.str();
 }
