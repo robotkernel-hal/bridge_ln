@@ -59,28 +59,19 @@ static bool ends_with(const string& a, const string& b) {
 }
 
 //! construct ln_bridge client
-ln_bridge::client::client(const char*& bridgename, YAML::Node& node) : bridge_base(bridgename, "bridge_ln", node) {
+ln_bridge::client::client(const char*& bridgename, YAML::Node& node) 
+    : bridge_base(bridgename, "bridge_ln", node), clnt(NULL) {
+    pthread_mutex_init(&service_map_lock, NULL);
+
 	kernel& k = *kernel::get_instance();
 
-	try {
-		clnt = new ln::client(k._name, k.main_argc, k.main_argv);
-	} catch(exception& e) {
-		log(error, "ln client init failed: %s\n", e.what());
-		clnt = NULL;
-	}
+    robotkernel::bridge::cbs_t *sp = new robotkernel::bridge::cbs_t();
+    sp->add_service    = std::bind(&ln_bridge::client::addService, this, _1);
+    sp->remove_service = std::bind(&ln_bridge::client::removeService, this, _1);
 
-	if (clnt) {
-		clnt->handle_service_group_in_thread_pool(NULL, "main");
-		clnt->set_max_threads("main", 2);
+    k.add_bridge_cbs(sp);
 
-		robotkernel::bridge::cbs_t *sp = 
-			new robotkernel::bridge::cbs_t();
-		sp->add_service = std::bind(&ln_bridge::client::addService, this, _1);
-		sp->remove_service = 
-			std::bind(&ln_bridge::client::removeService, this, _1);
-
-		robotkernel::kernel::get_instance()->add_bridge_cbs(sp);
-	}
+    start();
 }
 
 //! destruct ln_bridge client
@@ -91,7 +82,43 @@ ln_bridge::client::~client() {
 		delete it->second;
 
 	service_map.clear();
+
+    if (clnt)
+        delete clnt;
+
+    pthread_mutex_destroy(&service_map_lock);
 }
+        
+//!< handler function called if thread is running
+void ln_bridge::client::run() {
+	kernel& k = *kernel::get_instance();
+
+    while (running()) {
+        if (clnt) {
+		    clnt->handle_service_group_in_thread_pool(NULL, "main");
+		    clnt->set_max_threads("main", 2);
+
+            pthread_mutex_lock(&service_map_lock);
+
+            for (service_map_t::iterator it = service_map.begin();
+                    it != service_map.end(); ++it) {
+                it->second->register_service();
+            }
+
+            pthread_mutex_unlock(&service_map_lock);
+
+            break;
+        }
+	
+        try {
+            clnt = new ln::client(k._name, k.main_argc, k.main_argv);
+        } catch(exception& e) {
+            sleep(1);
+            clnt = NULL;
+        }
+    }
+}
+
 
 //! create and register ln service
 /*!
@@ -99,7 +126,10 @@ ln_bridge::client::~client() {
  */
 void ln_bridge::client::addService(const robotkernel::service_t& svc) {
 	ln_bridge::service *ln_svc = new ln_bridge::service(*this, svc);
+            
+    pthread_mutex_lock(&service_map_lock);
 	service_map[svc.name] = ln_svc;
+    pthread_mutex_unlock(&service_map_lock);
 }
 
 //! unregister and remove ln service 
@@ -110,11 +140,15 @@ void ln_bridge::client::removeService(
 		const robotkernel::service_t& svc) {
 	service_map_t::iterator it;
 
+    pthread_mutex_lock(&service_map_lock);
+
 	if ((it = service_map.find(svc.name)) != service_map.end()) {
 		ln_bridge::service *ln_svc = it->second;
 		service_map.erase(it);
 		delete ln_svc;
 	}
+    
+    pthread_mutex_unlock(&service_map_lock);
 }
 
 //! construct ln_bridge service
@@ -123,23 +157,31 @@ void ln_bridge::client::removeService(
  * \param svc robotkernel service
  */
 ln_bridge::service::service(ln_bridge::client& clnt, 
-		const robotkernel::service_t& svc) : _clnt(clnt), _svc(svc) {
+		const robotkernel::service_t& svc) : _clnt(clnt), _svc(svc), _ln_service(NULL) {
 	_create_ln_message_defition(); 
 
+    register_service();
+}
+
+//! register service to ln
+void ln_bridge::service::register_service() {
+    if (!_clnt.clnt || _ln_service)
+        return;
+
 	// create service name
-	string svc_name = clnt.clnt->name + "." + _svc.name;
+	string svc_name = _clnt.clnt->name + "." + _svc.name;
 
 	// put ln message definition. this will create 
 	// ~/ln_message_definitions/gen/<svc_name>
 	for (map<string, string>::iterator it = sub_mds.begin(); 
 			it != sub_mds.end(); ++it) {
-		clnt.clnt->put_message_definition(it->first, it->second);
+		_clnt.clnt->put_message_definition(it->first, it->second);
 	}
 
-	clnt.clnt->put_message_definition(svc_name, md);
+	_clnt.clnt->put_message_definition(svc_name, md);
 
 	// get ln service provider
-	_ln_service = clnt.clnt->get_service_provider(
+	_ln_service = _clnt.clnt->get_service_provider(
 			svc_name, string("gen/" + svc_name), signature);
 
 	// set handler and register
