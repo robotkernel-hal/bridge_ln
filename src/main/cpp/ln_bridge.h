@@ -7,7 +7,6 @@
 
 #include "ln.h"
 #include "ln_cppwrapper.h"
-#include "robotkernel/bridge_interface.h"
 #include "robotkernel/bridge_base.h"
 
 namespace ln_bridge {
@@ -16,8 +15,7 @@ class service;
 
 class client : 
     public robotkernel::bridge_base, 
-    public robotkernel::runnable,
-    public robotkernel::CommBridgeInterface{
+    public robotkernel::runnable {
     public:
         //! construct ln_bridge client
         client(const char*& bridgename, YAML::Node& node);
@@ -29,13 +27,13 @@ class client :
         /*!
          * \param svc robotkernel service struct
          */
-        void addService(const robotkernel::service_t& svc);
+        void add_service(const robotkernel::service_t& svc);
 
         //! unregister and remove ln service 
         /*!
          * \param svc robotkernel service struct
          */
-        void removeService(const robotkernel::service_t& svc);
+        void remove_service(const robotkernel::service_t& svc);
         
         //!< handler function called if thread is running
         void run();

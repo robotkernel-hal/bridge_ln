@@ -66,8 +66,8 @@ ln_bridge::client::client(const char*& bridgename, YAML::Node& node)
     kernel& k = *kernel::get_instance();
 
     robotkernel::bridge::cbs_t *sp = new robotkernel::bridge::cbs_t();
-    sp->add_service    = std::bind(&ln_bridge::client::addService, this, _1);
-    sp->remove_service = std::bind(&ln_bridge::client::removeService, this, _1);
+    sp->add_service    = std::bind(&ln_bridge::client::add_service, this, _1);
+    sp->remove_service = std::bind(&ln_bridge::client::remove_service, this, _1);
 
     k.add_bridge_cbs(sp);
 
@@ -124,7 +124,7 @@ void ln_bridge::client::run() {
 /*!
  * \param svc robotkernel service struct
  */
-void ln_bridge::client::addService(const robotkernel::service_t& svc) {
+void ln_bridge::client::add_service(const robotkernel::service_t& svc) {
     ln_bridge::service *ln_svc = new ln_bridge::service(*this, svc);
 
     pthread_mutex_lock(&service_map_lock);
@@ -136,7 +136,7 @@ void ln_bridge::client::addService(const robotkernel::service_t& svc) {
 /*!
  * \param svc robotkernel service struct
  */
-void ln_bridge::client::removeService(
+void ln_bridge::client::remove_service(
         const robotkernel::service_t& svc) {
     service_map_t::iterator it;
 
