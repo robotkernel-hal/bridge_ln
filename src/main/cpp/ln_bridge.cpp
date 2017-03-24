@@ -303,10 +303,14 @@ int ln_bridge::service::handle(ln::service_request& req) {
                         ((uint32_t *)adr)[0] = (uint32_t)elem.size();                                           \
                         adr += 4;                                                                               \
                         \
+                        type* entries = new type[elem.size()];                                                  \
+                        to_delete.push_back((uint8_t *)entries);                                                \
+                        \
                         for (unsigned i = 0; i < elem.size(); ++i) {                                            \
-                            ((type *)adr)[0] = (type)elem[i];                                                   \
-                            adr += ln_dt_size;                                                                  \
+                            entries[i] = (type)elem[i];                                                         \
                         }                                                                                       \
+                        ((type **)adr)[0] = entries;                                                            \
+                        adr += sizeof(type *);                                                                  \
                     }
 
 #define add_vector_type_char(type) \
@@ -326,14 +330,14 @@ int ln_bridge::service::handle(ln::service_request& req) {
                         adr += sizeof(void*);                                                                   \
                     }
 
-                    add_vector_type(uint64_t*);
-                    add_vector_type(int64_t*);
-                    add_vector_type(uint32_t*);
-                    add_vector_type(int32_t*);
-                    add_vector_type(uint16_t*);
-                    add_vector_type(int16_t*);
-                    add_vector_type(uint8_t*);
-                    add_vector_type(int8_t*);
+                    add_vector_type(uint64_t);
+                    add_vector_type(int64_t);
+                    add_vector_type(uint32_t);
+                    add_vector_type(int32_t);
+                    add_vector_type(uint16_t);
+                    add_vector_type(int16_t);
+                    add_vector_type(uint8_t);
+                    add_vector_type(int8_t);
                     add_vector_type_char(char*);
                 }
             } else if (ends_with(ln_dt, string("*"))) {
