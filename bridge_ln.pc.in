@@ -1,0 +1,11 @@
+prefix=@prefix@
+exec_prefix=@exec_prefix@
+libdir=@libdir@
+includedir=@includedir@
+
+Name: bridge_ln
+Description: robotkernel bridge for links_and_nodes bindings
+URL: rmc-github.robotic.dlr.de:robotkernel/bridge_ln.git
+Version: @VERSION@
+Cflags: -I@includedir@ 
+
