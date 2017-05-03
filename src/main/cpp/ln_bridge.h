@@ -46,6 +46,8 @@ class client :
         typedef std::map<std::string, ln_bridge::service *> service_map_t;
         service_map_t service_map;
         pthread_mutex_t service_map_lock;
+    
+        robotkernel::bridge::cbs_t *sp;
 };
 
 class service {

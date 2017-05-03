@@ -1,5 +1,3 @@
-
-libdir = $(prefix)/lib
 lib_LTLIBRARIES = libbridge_ln.la
 
 libbridge_ln_la_SOURCES  = ln_bridge.cpp

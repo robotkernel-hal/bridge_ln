@@ -63,12 +63,11 @@ ln_bridge::client::client(const char*& bridgename, YAML::Node& node)
     : bridge_base(bridgename, "bridge_ln", node), clnt(NULL) {
     pthread_mutex_init(&service_map_lock, NULL);
 
-    kernel& k = *kernel::get_instance();
-
-    robotkernel::bridge::cbs_t *sp = new robotkernel::bridge::cbs_t();
+    sp                 = new robotkernel::bridge::cbs_t();
     sp->add_service    = std::bind(&ln_bridge::client::add_service, this, _1);
     sp->remove_service = std::bind(&ln_bridge::client::remove_service, this, _1);
 
+    kernel& k = *kernel::get_instance();
     k.add_bridge_cbs(sp);
 
     start();
@@ -76,9 +75,11 @@ ln_bridge::client::client(const char*& bridgename, YAML::Node& node)
 
 //! destruct ln_bridge client
 ln_bridge::client::~client() {
-    service_map_t::iterator it;
+    kernel& k = *kernel::get_instance();
+    k.remove_bridge_cbs(sp);
+    delete sp;
 
-    for (it = service_map.begin(); it != service_map.end(); ++it)
+    for (auto it = service_map.begin(); it != service_map.end(); ++it)
         delete it->second;
 
     service_map.clear();
