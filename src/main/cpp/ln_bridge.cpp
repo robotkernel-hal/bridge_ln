@@ -20,6 +20,13 @@ static string service_datatype_to_ln(string datatype) {
     return datatype;
 }
 
+static bool ln_datatype_is_primitive(string datatype) {
+    if (datatype == "string")
+        return false;
+
+    return true;
+}
+
 static std::pair<std::string, int> ln_datatype_size_data[] = {
     std::make_pair("int64_t", 8),
     std::make_pair("uint64_t", 8),
@@ -229,6 +236,59 @@ int ln_bridge::service::handle(ln::service_request& req) {
                 adr += sizeof(char*);
 
                 service_request.push_back(string(tmp_adr, tmp_len));
+            } else if (boost::starts_with(key, "vector")) {
+                const size_t equals_idx = key.find_first_of('/');
+                if (std::string::npos != equals_idx)
+                {
+                    //signature "uint32_t 4 1,[uint32_t 4 1,char* 1 1]* 8 1|uint32_t 4 1,[uint32_t 4 1,char* 1 1]* 8 1"
+
+                    string vector = key.substr(0, equals_idx);
+                    string real_key = key.substr(equals_idx + 1);
+                    string ln_dt = service_datatype_to_ln(real_key);
+
+#define add_vector_type(type) \
+                    if (ln_dt == #type) {                                                                       \
+                        uint32_t len = ((uint32_t *)adr)[0];                                                    \
+                        adr += 4;                                                                               \
+                        \
+                        std::vector<rk_type> entries(len);                                                      \
+                        type *tmp_adr = ((type **)adr)[0];                                                      \
+                        adr += sizeof(type *);                                                                  \
+                        \
+                        for (unsigned i = 0; i < len; ++i) {                                                    \
+                            entries[i] = tmp_adr[i];                                                            \
+                        }                                                                                       \
+                        service_request.push_back(entries);                                                     \
+                    }
+
+#define add_vector_type_char(type) \
+                    if (ln_dt == #type) {                                                                       \
+                        ((uint32_t *)adr)[0] = (uint32_t)elem.size();                                           \
+                        adr += 4;                                                                               \
+                        \
+                        ln_vector_t* entries = new ln_vector_t[elem.size()];                                    \
+                        to_delete.push_back((uint8_t *)entries);                                                \
+                        \
+                        for (unsigned i = 0; i < elem.size(); ++i) {                                            \
+                            string entry = elem[i];                                                             \
+                            entries[i].len = entry.length();                                                    \
+                            entries[i].val = (const uint8_t *)entry.c_str();                                    \
+                        }                                                                                       \
+                        ((ln_vector_t **)adr)[0] = entries;                                                     \
+                        adr += sizeof(void*);                                                                   \
+                    }
+
+                    add_vector_type(uint64_t);
+                    add_vector_type(int64_t);
+                    add_vector_type(uint32_t);
+                    add_vector_type(int32_t);
+                    add_vector_type(uint16_t);
+                    add_vector_type(int16_t);
+                    add_vector_type(uint8_t);
+                    add_vector_type(int8_t);
+//                    add_vector_type_char(char*);
+                }
+
             } else if (ends_with(ln_dt, string("*"))) {               
                 service_request.push_back(((uint32_t *)adr)[0]);    //<! array length
                 adr += 4;                
@@ -400,25 +460,31 @@ void ln_bridge::service::_process_node(const YAML::Node& node,
                 string vector = key.substr(0, equals_idx);
                 string real_key = key.substr(equals_idx + 1);
 
-                ss_signature << "uint32_t 4 1,[";
+                bool is_primitive = ln_datatype_is_primitive(real_key);
 
                 string ln_dt = service_datatype_to_ln(real_key);
                 int ln_dt_size = ln_datatype_size(ln_dt);
 
-                stringstream ss_sub_md;
-                ss_sub_md << ln_dt << " data" << endl;//<< real_key << endl;
-                sub_mds[key] = ss_sub_md.str();
+                if (is_primitive) {
+                    ss_signature << "uint32_t 4 1," << ln_dt << "* " << ln_dt_size << " 1";
+                    ss_md << ln_dt << "* " << value << endl;
+                } else {
+                    ss_signature << "uint32_t 4 1,[";
 
-                ss_md << "define " << key << " as \"gen/" << key << "\"" << endl;
-                ss_md << key << "* " << value << endl;
+                    stringstream ss_sub_md;
+                    ss_sub_md << ln_dt << " data" << endl;//<< real_key << endl;
+                    sub_mds[key] = ss_sub_md.str();
 
-                if (ends_with(ln_dt, string("*")))
-                    ss_signature << "uint32_t 4 1,";
+                    ss_md << "define " << key << " as \"gen/" << key << "\"" << endl;
+                    ss_md << key << "* " << value << endl;
 
-                ss_signature << ln_dt << " " << ln_dt_size << " " << "1";
+                    if (ends_with(ln_dt, string("*")))
+                        ss_signature << "uint32_t 4 1,";
 
-                ss_signature << "]* " << sizeof(void*) << " 1";
+                    ss_signature << ln_dt << " " << ln_dt_size << " " << "1";
 
+                    ss_signature << "]* " << sizeof(void*) << " 1";
+                }
             }
             else
             {
