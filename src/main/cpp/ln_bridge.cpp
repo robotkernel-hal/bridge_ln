@@ -5,13 +5,28 @@
 #include "robotkernel/kernel.h"
 
 #include <functional>
-#include <boost/algorithm/string/predicate.hpp>
 
 using namespace std;
 using namespace std::placeholders;
 using namespace robotkernel;
 
 BRIDGE_DEF(bridge_ln, ln_bridge::client);
+
+// Checks whether `str' starts with `start' ignoring case
+static bool starts_with(const std::string& str, const std::string& start) {
+    if (&start == &str) 
+        return true; // str and start are the same string
+
+    if (start.length() > str.length()) 
+        return false;
+
+    for (size_t i = 0; i < start.length(); ++i) {
+        if (start[i] != str[i]) 
+            return false;
+    }
+
+    return true;
+}
 
 static string service_datatype_to_ln(string datatype) {
     if (datatype == "string")
@@ -70,21 +85,12 @@ ln_bridge::client::client(const char*& bridgename, YAML::Node& node)
     : bridge_base(bridgename, "bridge_ln", node), clnt(NULL) {
     pthread_mutex_init(&service_map_lock, NULL);
 
-    sp                 = new robotkernel::bridge::cbs_t();
-    sp->add_service    = std::bind(&ln_bridge::client::add_service, this, _1);
-    sp->remove_service = std::bind(&ln_bridge::client::remove_service, this, _1);
-
-    kernel& k = *kernel::get_instance();
-    k.add_bridge_cbs(sp);
-
-    start();
 }
 
 //! destruct ln_bridge client
 ln_bridge::client::~client() {
     kernel& k = *kernel::get_instance();
-    k.remove_bridge_cbs(sp);
-    delete sp;
+    k.remove_device(shared_from_this());
 
     for (auto it = service_map.begin(); it != service_map.end(); ++it)
         delete it->second;
@@ -97,10 +103,18 @@ ln_bridge::client::~client() {
     pthread_mutex_destroy(&service_map_lock);
 }
 
+//! init method
+void ln_bridge::client::init() {
+    kernel& k = *kernel::get_instance();
+    k.add_device(shared_from_this());
+
+    start();
+}
+
 //!< handler function called if thread is running
 void ln_bridge::client::run() {
     kernel& k = *kernel::get_instance();
-
+    
     while (running()) {
         if (clnt) {
             clnt->handle_service_group_in_thread_pool(NULL, "main");
@@ -236,7 +250,7 @@ int ln_bridge::service::handle(ln::service_request& req) {
                 adr += sizeof(char*);
 
                 service_request.push_back(string(tmp_adr, tmp_len));
-            } else if (boost::starts_with(key, "vector")) {
+            } else if (starts_with(key, "vector")) {
                 const size_t equals_idx = key.find_first_of('/');
                 if (std::string::npos != equals_idx)
                 {
@@ -287,6 +301,8 @@ int ln_bridge::service::handle(ln::service_request& req) {
                     add_vector_type(uint8_t);
                     add_vector_type(int8_t);
 //                    add_vector_type_char(char*);
+#undef add_vector_type_char
+#undef add_vector_type
                 }
 
             } else if (ends_with(ln_dt, string("*"))) {               
@@ -336,7 +352,7 @@ int ln_bridge::service::handle(ln::service_request& req) {
             string value = it->second.as<string>();
 
             string ln_dt = service_datatype_to_ln(key);
-            int ln_dt_size = ln_datatype_size(ln_dt);
+//            int ln_dt_size = ln_datatype_size(ln_dt);
 
             if (ln_dt == "char*") {
                 const string& tmp_string = service_response[i++];
@@ -347,7 +363,7 @@ int ln_bridge::service::handle(ln::service_request& req) {
                 else 
                     ((const char **)adr)[0] = NULL;
                 adr += sizeof(char *);
-            } else if (boost::starts_with(key, "vector")) {
+            } else if (starts_with(key, "vector")) {
                 const size_t equals_idx = key.find_first_of('/');
                 if (std::string::npos != equals_idx)
                 {
@@ -451,7 +467,7 @@ void ln_bridge::service::_process_node(const YAML::Node& node,
 
         string key   = it->first.as<string>();
         string value = it->second.as<string>();
-        if (boost::starts_with(key, "vector")) {
+        if (starts_with(key, "vector")) {
             const size_t equals_idx = key.find_first_of('/');
             if (std::string::npos != equals_idx)
             {

@@ -10,10 +10,14 @@
 #include "robotkernel/bridge_base.h"
 
 namespace ln_bridge {
+#ifdef EMACS
+}
+#endif
 
 class service;
 
 class client : 
+    public std::enable_shared_from_this<client>,
     public robotkernel::bridge_base, 
     public robotkernel::runnable {
     public:
@@ -22,6 +26,9 @@ class client :
 
         //! destruct ln_bridge client
         ~client();
+
+        //! init method
+        void init();
 
         //! create and register ln service
         /*!
@@ -46,8 +53,6 @@ class client :
         typedef std::map<std::string, ln_bridge::service *> service_map_t;
         service_map_t service_map;
         pthread_mutex_t service_map_lock;
-    
-        robotkernel::bridge::cbs_t *sp;
 };
 
 class service {
@@ -86,6 +91,9 @@ class service {
         }
 };
         
+#ifdef EMACS
+{
+#endif
 }
 
 #endif
