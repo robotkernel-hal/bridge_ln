@@ -50,7 +50,7 @@ class client :
         ln::client *clnt;
 
         //! links-and-nodes services map
-        typedef std::map<std::string, ln_bridge::service *> service_map_t;
+        typedef std::map<std::pair<std::string, std::string>, ln_bridge::service *> service_map_t;
         service_map_t service_map;
         pthread_mutex_t service_map_lock;
 };

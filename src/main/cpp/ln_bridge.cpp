@@ -149,8 +149,11 @@ void ln_bridge::client::run() {
 void ln_bridge::client::add_service(const robotkernel::service_t& svc) {
     ln_bridge::service *ln_svc = new ln_bridge::service(*this, svc);
 
+    log(verbose, "created ln service \"%s.%s\"\nmd:\n%s\nsignature:\n%s\n", 
+            svc.owner.c_str(), svc.name.c_str(), ln_svc->md.c_str(), ln_svc->signature.c_str());
+
     pthread_mutex_lock(&service_map_lock);
-    service_map[svc.name] = ln_svc;
+    service_map[std::make_pair(svc.owner, svc.name)] = ln_svc;
     pthread_mutex_unlock(&service_map_lock);
 }
 
@@ -160,14 +163,16 @@ void ln_bridge::client::add_service(const robotkernel::service_t& svc) {
  */
 void ln_bridge::client::remove_service(
         const robotkernel::service_t& svc) {
-    service_map_t::iterator it;
-
     pthread_mutex_lock(&service_map_lock);
 
-    if ((it = service_map.find(svc.name)) != service_map.end()) {
-        ln_bridge::service *ln_svc = it->second;
-        service_map.erase(it);
-        delete ln_svc;
+    for (auto it = service_map.begin(); it != service_map.end(); ++it) {
+        if ((it->first.first == svc.owner) && (it->first.second == svc.name)) {
+            ln_bridge::service *ln_svc = it->second;
+            service_map.erase(it);
+            delete ln_svc;
+
+            break;
+        }
     }
 
     pthread_mutex_unlock(&service_map_lock);
@@ -191,7 +196,7 @@ void ln_bridge::service::register_service() {
         return;
 
     // create service name
-    string svc_name = _clnt.clnt->name + "." + _svc.name;
+    string svc_name = _clnt.clnt->name + "." + _svc.owner + "." + _svc.name;
 
     // put ln message definition. this will create 
     // ~/ln_message_definitions/gen/<svc_name>
