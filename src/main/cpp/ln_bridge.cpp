@@ -89,9 +89,6 @@ ln_bridge::client::client(const char*& bridgename, YAML::Node& node)
 
 //! destruct ln_bridge client
 ln_bridge::client::~client() {
-    kernel& k = *kernel::get_instance();
-    k.remove_device(shared_from_this());
-
     for (auto it = service_map.begin(); it != service_map.end(); ++it)
         delete it->second;
 
@@ -105,9 +102,6 @@ ln_bridge::client::~client() {
 
 //! init method
 void ln_bridge::client::init() {
-    kernel& k = *kernel::get_instance();
-    k.add_device(shared_from_this());
-
     start();
 }
 
