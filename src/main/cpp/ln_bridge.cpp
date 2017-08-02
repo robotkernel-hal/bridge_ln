@@ -9,6 +9,7 @@
 using namespace std;
 using namespace std::placeholders;
 using namespace robotkernel;
+using namespace string_util;
 
 BRIDGE_DEF(bridge_ln, ln_bridge::client);
 
@@ -81,8 +82,11 @@ static bool ends_with(const string& a, const string& b) {
 }
 
 //! construct ln_bridge client
-ln_bridge::client::client(const char*& bridgename, YAML::Node& node) 
-    : bridge_base(bridgename, "bridge_ln", node), clnt(NULL) {
+ln_bridge::client::client(const char*& bridgename, YAML::Node& node) :
+    bridge_base(bridgename, "bridge_ln", node),
+    runnable(0, 0, format_string("bridge_ln.%s", bridgename)),
+    clnt(NULL)
+{
     pthread_mutex_init(&service_map_lock, NULL);
 
 }
