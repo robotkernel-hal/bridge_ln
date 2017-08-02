@@ -84,7 +84,7 @@ static bool ends_with(const string& a, const string& b) {
 //! construct ln_bridge client
 ln_bridge::client::client(const char*& bridgename, YAML::Node& node) :
     bridge_base(bridgename, "bridge_ln", node),
-    runnable(0, 0, format_string("bridge_ln.%s", bridgename)),
+    runnable(0, 0, bridgename),
     clnt(NULL)
 {
     pthread_mutex_init(&service_map_lock, NULL);
