@@ -106,16 +106,20 @@ ln_bridge::client::~client() {
 
 //! init method
 void ln_bridge::client::init() {
+    log(info, "starting client handler thread\n");
+
     start();
 }
 
 //!< handler function called if thread is running
 void ln_bridge::client::run() {
     kernel& k = *kernel::get_instance();
-    
+    char group_name[] = "main";
+
     while (running()) {
         if (clnt) {
-            clnt->handle_service_group_in_thread_pool(NULL, "main");
+
+            clnt->handle_service_group_in_thread_pool(group_name, "main");
             clnt->set_max_threads("main", 2);
 
             pthread_mutex_lock(&service_map_lock);
