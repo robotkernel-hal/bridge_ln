@@ -1,0 +1,18 @@
+requires_version 0.2.43
+# this include file can be customized with the following defines:
+#   bridge_ln_base
+#     (optional) path to bridge_ln base directory
+#     e.g. /volume/software/robotkernel/packages/bridge_ln/5.0.0
+#     defaults to rmpm structure
+#   bridge_ln_library_path
+#     (optional) add custom search paths
+
+defines
+bridge_ln_base:          %(dirname %(dirname %(CURDIR)))
+bridge_ln_libdir:        %(subst "${exec_prefix}/", "", "@libdir@")
+bridge_ln_type:          %(ifexists "%(bridge_ln_base)/%(bridge_ln_libdir)/libbridge_ln.so", "local_install", "rmpm_release")
+bridge_ln_library_path:  %(ifeq "%(bridge_ln_type)", "local_install", "%(bridge_ln_base)/%(bridge_ln_libdir)", "%(bridge_ln_base)/lib/$(ARCH)")
+
+ifndef rk_library_path: rk_library_path: ""
+rk_library_path: %(rk_library_path):%(bridge_ln_library_path)
+
