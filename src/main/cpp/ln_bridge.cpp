@@ -118,27 +118,28 @@ void ln_bridge::client::run() {
 
     while (running()) {
         if (clnt) {
+            clnt->handle_service_group_in_thread_pool(NULL, "main");
 
-            clnt->handle_service_group_in_thread_pool(group_name, "main");
-            clnt->set_max_threads("main", 2);
+            struct timespec ts = { 0, 1000000 };
+            nanosleep(&ts, NULL);
+        } else {
+            try {
+                log(info, "creating new ln client...\n");
+                clnt = new ln::client(k._name, k.main_argc, k.main_argv);
+                clnt->set_max_threads("main", 2);
 
-            pthread_mutex_lock(&service_map_lock);
+                pthread_mutex_lock(&service_map_lock);
 
-            for (service_map_t::iterator it = service_map.begin();
-                    it != service_map.end(); ++it) {
-                it->second->register_service();
+                for (service_map_t::iterator it = service_map.begin();
+                        it != service_map.end(); ++it) {
+                    it->second->register_service();
+                }
+
+                pthread_mutex_unlock(&service_map_lock);
+            } catch(exception& e) {
+                sleep(1);
+                clnt = NULL;
             }
-
-            pthread_mutex_unlock(&service_map_lock);
-
-            break;
-        }
-
-        try {
-            clnt = new ln::client(k._name, k.main_argc, k.main_argv);
-        } catch(exception& e) {
-            sleep(1);
-            clnt = NULL;
         }
     }
 }
