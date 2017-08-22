@@ -114,7 +114,6 @@ void ln_bridge::client::init() {
 //!< handler function called if thread is running
 void ln_bridge::client::run() {
     kernel& k = *kernel::get_instance();
-    char group_name[] = "main";
 
     while (running()) {
         if (clnt) {
