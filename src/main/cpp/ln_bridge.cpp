@@ -60,6 +60,8 @@ static std::pair<std::string, int> ln_datatype_size_data[] = {
     std::make_pair("uint16_t*", 2),
     std::make_pair("int8_t*", 1),
     std::make_pair("uint8_t*", 1),
+    std::make_pair("float", 4),
+    std::make_pair("double", 8),
     std::make_pair("char*", 1)
 };
 
