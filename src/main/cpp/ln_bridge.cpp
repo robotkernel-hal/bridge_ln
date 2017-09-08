@@ -309,6 +309,8 @@ int ln_bridge::service::handle(ln::service_request& req) {
                     add_vector_type(int16_t);
                     add_vector_type(uint8_t);
                     add_vector_type(int8_t);
+                    add_vector_type(float);
+                    add_vector_type(double);
 //                    add_vector_type_char(char*);
 #undef add_vector_type_char
 #undef add_vector_type
@@ -331,6 +333,8 @@ int ln_bridge::service::handle(ln::service_request& req) {
                 push_back_type(int16_t*);
                 push_back_type(uint8_t*);
                 push_back_type(int8_t*);
+                push_back_type(float*);
+                push_back_type(double*);
             } else {
                 push_back_type(uint64_t);
                 push_back_type(int64_t);
@@ -340,6 +344,8 @@ int ln_bridge::service::handle(ln::service_request& req) {
                 push_back_type(int16_t);
                 push_back_type(uint8_t);
                 push_back_type(int8_t);
+                push_back_type(float);
+                push_back_type(double);
 #undef push_back_type
             }
         }
@@ -424,6 +430,8 @@ int ln_bridge::service::handle(ln::service_request& req) {
                     add_vector_type(int16_t);
                     add_vector_type(uint8_t);
                     add_vector_type(int8_t);
+                    add_vector_type(float);
+                    add_vector_type(double);
                     add_vector_type_char(char*);
                 }
             } else if (ends_with(ln_dt, string("*"))) {
@@ -444,6 +452,8 @@ int ln_bridge::service::handle(ln::service_request& req) {
                 push_back_type(int16_t*);
                 push_back_type(uint8_t*);
                 push_back_type(int8_t*);
+                push_back_type(float*);
+                push_back_type(double*);
             } else {
                 push_back_type(uint64_t);
                 push_back_type(int64_t);
@@ -453,6 +463,8 @@ int ln_bridge::service::handle(ln::service_request& req) {
                 push_back_type(int16_t);
                 push_back_type(uint8_t);
                 push_back_type(int8_t);
+                push_back_type(float);
+                push_back_type(double);
             }
         }
     }
