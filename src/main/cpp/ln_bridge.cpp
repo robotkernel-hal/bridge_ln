@@ -95,6 +95,8 @@ ln_bridge::client::client(const char*& bridgename, YAML::Node& node) :
 
 //! destruct ln_bridge client
 ln_bridge::client::~client() {
+    stop();
+
     for (auto it = service_map.begin(); it != service_map.end(); ++it)
         delete it->second;
 
