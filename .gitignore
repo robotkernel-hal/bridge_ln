@@ -28,3 +28,4 @@
 /test-driver
 /compile
 /workspace-release
+/**/*.inc.lnc
