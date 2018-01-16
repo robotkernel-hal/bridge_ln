@@ -10,8 +10,12 @@ requires_version 0.2.43
 defines
 bridge_ln_base:          %(dirname %(dirname %(CURDIR)))
 bridge_ln_libdir:        %(subst "${exec_prefix}/", "", "@libdir@")
+bridge_ln_libpath:       %(subst "@DLRRM_HOST_PLATFORM@", "$(ARCH)", "@LINKS_AND_NODES_LIBPATHES@")
 bridge_ln_library_path:  %(bridge_ln_base)/%(bridge_ln_libdir)
 
 ifndef rk_library_path: rk_library_path: ""
 rk_library_path: %(rk_library_path):%(bridge_ln_library_path)
+
+ifndef rk_libpath: rk_libpath: ""
+rk_libpath: %(rk_libpath):%(bridge_ln_libpath)
 

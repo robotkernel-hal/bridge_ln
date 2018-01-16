@@ -26,6 +26,28 @@ m4_ifdef([PKG_INSTALLDIR], [PKG_INSTALLDIR], [pkgconfigdir='${libdir}/pkgconfig'
 # Check dependencies
 RK_CHECK_MODULES
 
+AC_DEFUN([GET_LIBRARY_PATHES],
+         [
+            LIBSI=""
+            for path in $2; do
+                ANS=$([ [[ $path == -L* ]] || echo 'fail' ])
+                if test x$ANS != xfail; then
+                    STRIPPED=$([ echo ${path#-L} ])
+                    if test "$LIBSI" = ""; then
+                        LIBSI="$STRIPPED"
+                    else
+                        LIBSI="$LIBSI:$STRIPPED"
+                    fi
+                fi
+            done
+
+            $1[]=$LIBSI
+        ])
+
+GET_LIBRARY_PATHES(LINKS_AND_NODES_LIBPATHES, $LINKS_AND_NODES_LIBS)
+AC_SUBST(LINKS_AND_NODES_LIBPATHES)
+AC_SUBST(DLRRM_HOST_PLATFORM)
+
 # Checks for header files.
 AC_CHECK_HEADERS([stdlib.h string.h termios.h])
 
