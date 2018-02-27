@@ -10,3 +10,4 @@ This service bridge exports all robotkernel-5 services via [[links_and_nodes|lin
 
 There is no need to supply ln manager settings here. These are parsed from command line arguments ( -ln_manager <host>:<port>).
 
+[[Category:Robotkernel-5|bridge-ln]]
