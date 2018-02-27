@@ -1,4 +1,4 @@
-This service bridge exports all robotkernel-5 services via [[links_and_nodes|links-and-nodes]].
+This service bridge exports all robotkernel-5 services via [[links_and_nodes|links-and-nodes]]. LN-Message definitions are generated dynamically from the robotkernel-5 service defintions.
 
 = Configuration =
 
@@ -7,4 +7,6 @@ This service bridge exports all robotkernel-5 services via [[links_and_nodes|lin
    so_file: libbridge_ln.so
    config:
      loglevel: info
+
+There is no need to supply ln manager settings here. These are parsed from command line arguments ( -ln_manager <host>:<port>).
 
