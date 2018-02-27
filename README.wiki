@@ -1,0 +1,10 @@
+This service bridge exports all robotkernel-5 services via [[links_and_nodes|links-and-nodes]].
+
+= Configuration =
+
+ bridges:
+ - name: ln
+   so_file: libbridge_ln.so
+   config:
+     loglevel: info
+
