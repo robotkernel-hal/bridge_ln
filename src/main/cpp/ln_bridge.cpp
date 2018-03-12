@@ -121,7 +121,7 @@ void ln_bridge::client::run() {
 
     while (running()) {
         if (clnt) {
-            clnt->handle_service_group_in_thread_pool(NULL, "main");
+            clnt->wait_and_handle_service_group_requests(NULL);
 
             struct timespec ts = { 0, 1000000 };
             nanosleep(&ts, NULL);
@@ -129,7 +129,7 @@ void ln_bridge::client::run() {
             try {
                 log(info, "creating new ln client...\n");
                 clnt = new ln::client(k._name, k.main_argc, k.main_argv);
-                clnt->set_max_threads("main", 2);
+                //clnt->set_max_threads("main", 2);
 
                 pthread_mutex_lock(&service_map_lock);
 
