@@ -206,6 +206,10 @@ void ln_bridge::service::register_service() {
     // create service name
     string svc_name = _clnt.clnt->name + "." + _svc.owner + "." + _svc.name;
 
+    string prefix = _clnt.clnt->name + "." + _svc.owner + ".";
+    size_t svc_hash = hash<string>()(prefix);
+    string svc_md_name = to_string(svc_hash) + "." + _svc.name;
+
     // put ln message definition. this will create 
     // ~/ln_message_definitions/gen/<svc_name>
     for (map<string, string>::iterator it = sub_mds.begin(); 
@@ -213,11 +217,24 @@ void ln_bridge::service::register_service() {
         _clnt.clnt->put_message_definition(it->first, it->second);
     }
 
-    _clnt.clnt->put_message_definition(svc_name, md);
+    bool already_put = false;
+    for (const auto& kv : _clnt.stored_mds) {
+        if (!kv.second.compare(md)) {
+            already_put = true;
+            svc_md_name = kv.first;
+            break;
+        }
+    }
+
+    if (!already_put) {
+        _clnt.log(verbose, "putting md %s\n", svc_md_name.c_str());
+        _clnt.clnt->put_message_definition(svc_md_name, md);
+        _clnt.stored_mds[svc_md_name] = md;
+    }
 
     // get ln service provider
     _ln_service = _clnt.clnt->get_service_provider(
-            svc_name, string("gen/" + svc_name), signature);
+            svc_name, string("gen/" + svc_md_name), signature);
 
     // set handler and register
     _ln_service->set_handler(&ln_bridge::service::service_cb, this);
