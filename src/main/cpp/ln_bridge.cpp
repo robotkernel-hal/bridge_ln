@@ -121,7 +121,7 @@ void ln_bridge::client::run() {
 
     while (running()) {
         if (clnt) {
-            clnt->wait_and_handle_service_group_requests(NULL);
+            clnt->wait_and_handle_service_group_requests(NULL, 0.1);
 
             struct timespec ts = { 0, 1000000 };
             nanosleep(&ts, NULL);
