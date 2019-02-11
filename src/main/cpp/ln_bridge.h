@@ -54,6 +54,8 @@ class client :
         service_map_t service_map;
         pthread_mutex_t service_map_lock;
         std::map<std::string, std::string> stored_mds;
+
+        std::string group_name;
 };
 
 class service {

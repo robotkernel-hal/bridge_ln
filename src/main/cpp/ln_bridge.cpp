@@ -91,6 +91,7 @@ ln_bridge::client::client(const char*& bridgename, YAML::Node& node) :
 {
     pthread_mutex_init(&service_map_lock, NULL);
 
+    group_name = format_string("ln_bridge_%s", bridgename);
 }
 
 //! destruct ln_bridge client
@@ -121,7 +122,8 @@ void ln_bridge::client::run() {
 
     while (running()) {
         if (clnt) {
-            clnt->wait_and_handle_service_group_requests(NULL, 0.1);
+            //clnt->wait_and_handle_service_group_requests(NULL, 0.1);
+            clnt->handle_service_group_in_thread_pool(group_name.c_str(), "main");
 
             struct timespec ts = { 0, 1000000 };
             nanosleep(&ts, NULL);
@@ -129,7 +131,7 @@ void ln_bridge::client::run() {
             try {
                 log(info, "creating new ln client...\n");
                 clnt = new ln::client(k._name, k.main_argc, k.main_argv);
-                //clnt->set_max_threads("main", 2);
+                clnt->set_max_threads("main", 16);
 
                 pthread_mutex_lock(&service_map_lock);
 
@@ -238,7 +240,7 @@ void ln_bridge::service::register_service() {
 
     // set handler and register
     _ln_service->set_handler(&ln_bridge::service::service_cb, this);
-    _ln_service->do_register(NULL);
+    _ln_service->do_register(_clnt.group_name.c_str());
 }; 
 
 //! destruct ln_bridge service
