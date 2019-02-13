@@ -18,6 +18,8 @@ class MainProject(ConanFile):
     requires = "robotkernel/[~=5.0]@robotkernel/unstable"
 
     def source(self):
+        self.run("git clone -b 0.12.2 git@rmc-github.robotic.dlr.de:schm-fl/links_and_nodes.git externals/links_and_nodes")
+
         filedata = None
         filename = "project.properties"
         with open(filename, 'r') as f:
@@ -26,7 +28,6 @@ class MainProject(ConanFile):
             f.write(re.sub("VERSION *=.*[^\n]", f"VERSION = {self.version}", filedata))
 
     def build(self):
-        self.run("git submodule update --init --recursive")
         self.run("autoreconf -if")
         autotools = AutoToolsBuildEnvironment(self)
         autotools.libs=[]
