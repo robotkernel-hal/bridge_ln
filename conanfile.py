@@ -26,6 +26,7 @@ class MainProject(ConanFile):
             f.write(re.sub("VERSION *=.*[^\n]", f"VERSION = {self.version}", filedata))
 
     def build(self):
+        self.run("git submodule update --init --recursive")
         self.run("autoreconf -if")
         autotools = AutoToolsBuildEnvironment(self)
         autotools.libs=[]
