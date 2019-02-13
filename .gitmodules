@@ -1,4 +1,0 @@
-[submodule "externals/links_and_nodes"]
-	path = externals/links_and_nodes
-	url = git@rmc-github.robotic.dlr.de:schm-fl/links_and_nodes.git
-	branch = 0.12.2
