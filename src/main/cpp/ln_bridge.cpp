@@ -129,7 +129,7 @@ void ln_bridge::client::run() {
             nanosleep(&ts, NULL);
         } else {
             try {
-                log(info, "creating new ln client...\n");
+                log(verbose, "creating new ln client...\n");
                 clnt = new ln::client(k._name, k.main_argc, k.main_argv);
                 clnt->set_max_threads("main", 16);
 
@@ -142,6 +142,8 @@ void ln_bridge::client::run() {
 
                 pthread_mutex_unlock(&service_map_lock);
             } catch(exception& e) {
+                log(warning, "creating ln client failed: %s\n", e.what());
+
                 sleep(1);
                 clnt = NULL;
             }

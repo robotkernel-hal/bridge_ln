@@ -15,11 +15,9 @@ class MainProject(ConanFile):
     }
 
     generators = "pkg_config"
-    requires = "robotkernel/[~=5.0]@robotkernel/unstable"
+    requires = "robotkernel/[~=5.0]@robotkernel/unstable", "links_and_nodes/0.12.2@robotkernel/unstable"
 
     def source(self):
-        self.run("git clone -b 0.12.2 git@rmc-github.robotic.dlr.de:schm-fl/links_and_nodes.git externals/links_and_nodes")
-
         filedata = None
         filename = "project.properties"
         with open(filename, 'r') as f:
