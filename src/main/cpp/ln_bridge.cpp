@@ -444,7 +444,8 @@ int ln_bridge::service::handle(ln::service_request& req) {
                             for (unsigned i = 0; i < elem.size(); ++i) {                                            \
                                 string entry = elem[i];                                                             \
                                 entries[i].len = entry.length();                                                    \
-                                entries[i].val = (const uint8_t *)entry.c_str();                                    \
+                                entries[i].val = (const uint8_t *)(strdup(entry.c_str()));                          \
+                                to_delete.push_back((uint8_t *)entries[i].val);                                     \
                             }                                                                                       \
                             ((ln_vector_t **)adr)[0] = entries;                                                     \
                             adr += sizeof(void*);                                                                   \
