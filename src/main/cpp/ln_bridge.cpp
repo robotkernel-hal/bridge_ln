@@ -401,9 +401,10 @@ int ln_bridge::service::handle(ln::service_request& req) {
                     const string& tmp_string = service_response[i++];
                     ((uint32_t *)adr)[0] = (uint32_t)tmp_string.size();
                     adr += 4;
-                    if (tmp_string.size())
-                        ((const char **)adr)[0] = (const char *)tmp_string.c_str();
-                    else 
+                    if (tmp_string.size()) {
+                        ((const char **)adr)[0] = (const char *)strdup(tmp_string.c_str());
+                        to_delete.push_back((uint8_t *)(((const char **)adr)[0]));
+                    } else 
                         ((const char **)adr)[0] = NULL;
                     adr += sizeof(char *);
                 } else if (starts_with(key, "vector")) {
