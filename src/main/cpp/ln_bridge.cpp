@@ -207,12 +207,32 @@ void ln_bridge::service::register_service() {
     if (!_clnt.clnt || _ln_service)
         return;
 
+    bool reuse_existing = false, existing_but_not_matching = false;
+
+    try {
+        string existing_md;
+        unsigned int existing_size;
+
+        _clnt.clnt->get_message_definition(_svc.name, existing_md, existing_size);
+
+        if (existing_md == md)
+            reuse_existing = true;
+        else
+            existing_but_not_matching = true;
+    } catch (std::exception& e){
+    }
+
     // create service name
     string svc_name = _clnt.clnt->name + "." + _svc.owner + "." + _svc.name;
+    string svc_md_name;
 
-    string prefix = _clnt.clnt->name + "." + _svc.owner + ".";
-    size_t svc_hash = hash<string>()(prefix);
-    string svc_md_name = to_string(svc_hash) + "." + _svc.name;
+    if (reuse_existing || !existing_but_not_matching) {
+        svc_md_name = _svc.name;
+    } else {
+        string prefix = _clnt.clnt->name + "." + _svc.owner + ".";
+        size_t svc_hash = hash<string>()(prefix);
+        svc_md_name = to_string(svc_hash) + "." + _svc.name;
+    }
 
     // put ln message definition. this will create 
     // ~/ln_message_definitions/gen/<svc_name>
