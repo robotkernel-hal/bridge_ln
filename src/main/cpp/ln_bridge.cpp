@@ -207,40 +207,19 @@ void ln_bridge::service::register_service() {
     if (!_clnt.clnt || _ln_service)
         return;
 
-    bool reuse_existing = false, existing_but_not_matching = false;
-
-    if (name == "")
-        name = _svc.name;
-
-    try {
-        string existing_md;
-        unsigned int existing_size;
-
-        _clnt.clnt->get_message_definition(string("robotkernel/") + name,
-                    existing_md, existing_size);
-
-        if (existing_md == md)
-            reuse_existing = true;
-        else {
-            _clnt.log(info, "mds do not match \"%s\" vs \"%s\"\n", 
-                    existing_md.c_str(), md.c_str());
-
-            existing_but_not_matching = true;
-        }
-    } catch (std::exception& e){
-    }
-
-    // create service name
-    string svc_name = _clnt.clnt->name + "." + _svc.owner + "." + name;
     string svc_md_name;
 
-    if (reuse_existing || !existing_but_not_matching) {
+    if (name != "") {
         svc_md_name = string("robotkernel/") + name;
     } else {
+        name = _svc.name;
         string prefix = _clnt.clnt->name + "." + _svc.owner + ".";
         size_t svc_hash = hash<string>()(prefix);
         svc_md_name = to_string(svc_hash) + "." + name;
     }
+
+    // create service name
+    string svc_name = _clnt.clnt->name + "." + _svc.owner + "." + name;
 
     // put ln message definition. this will create 
     // ~/ln_message_definitions/gen/<svc_name>
