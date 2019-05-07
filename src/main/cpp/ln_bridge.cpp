@@ -421,9 +421,10 @@ int ln_bridge::service::handle(ln::service_request& req) {
                     const string& tmp_string = service_response[i++];
                     ((uint32_t *)adr)[0] = (uint32_t)tmp_string.size();
                     adr += 4;
-                    if (tmp_string.size())
-                        ((const char **)adr)[0] = (const char *)tmp_string.c_str();
-                    else 
+                    if (tmp_string.size()) {
+                        ((const char **)adr)[0] = (const char *)strdup(tmp_string.c_str());
+                        to_delete.push_back((uint8_t *)(((const char **)adr)[0]));
+                    } else 
                         ((const char **)adr)[0] = NULL;
                     adr += sizeof(char *);
                 } else if (starts_with(key, "vector")) {
@@ -464,7 +465,8 @@ int ln_bridge::service::handle(ln::service_request& req) {
                             for (unsigned i = 0; i < elem.size(); ++i) {                                            \
                                 string entry = elem[i];                                                             \
                                 entries[i].len = entry.length();                                                    \
-                                entries[i].val = (const uint8_t *)entry.c_str();                                    \
+                                entries[i].val = (const uint8_t *)(strdup(entry.c_str()));                          \
+                                to_delete.push_back((uint8_t *)entries[i].val);                                     \
                             }                                                                                       \
                             ((ln_vector_t **)adr)[0] = entries;                                                     \
                             adr += sizeof(void*);                                                                   \
