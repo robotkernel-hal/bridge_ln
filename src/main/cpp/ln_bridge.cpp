@@ -216,13 +216,17 @@ void ln_bridge::service::register_service() {
         string existing_md;
         unsigned int existing_size;
 
-        _clnt.clnt->get_message_definition(string("robotkernel.") + name,
+        _clnt.clnt->get_message_definition(string("robotkernel/") + name,
                     existing_md, existing_size);
 
         if (existing_md == md)
             reuse_existing = true;
-        else
+        else {
+            _clnt.log(info, "mds do not match \"%s\" vs \"%s\"\n", 
+                    existing_md.c_str(), md.c_str());
+
             existing_but_not_matching = true;
+        }
     } catch (std::exception& e){
     }
 
@@ -231,7 +235,7 @@ void ln_bridge::service::register_service() {
     string svc_md_name;
 
     if (reuse_existing || !existing_but_not_matching) {
-        svc_md_name = string("robotkernel.") + name;
+        svc_md_name = string("robotkernel/") + name;
     } else {
         string prefix = _clnt.clnt->name + "." + _svc.owner + ".";
         size_t svc_hash = hash<string>()(prefix);
