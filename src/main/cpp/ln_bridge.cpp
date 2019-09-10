@@ -196,7 +196,7 @@ void ln_bridge::client::remove_service(
  * \param svc robotkernel service
  */
 ln_bridge::service::service(ln_bridge::client& clnt, 
-        const robotkernel::service_t& svc) : _clnt(clnt), _svc(svc), _ln_service(NULL) {
+        const robotkernel::service_t& svc) : _clnt(clnt), _svc(svc), _ln_service(NULL), name("") {
     _create_ln_message_defition(); 
 
     register_service();
@@ -207,32 +207,19 @@ void ln_bridge::service::register_service() {
     if (!_clnt.clnt || _ln_service)
         return;
 
-    bool reuse_existing = false, existing_but_not_matching = false;
+    string svc_md_name;
 
-    try {
-        string existing_md;
-        unsigned int existing_size;
-
-        _clnt.clnt->get_message_definition(_svc.name, existing_md, existing_size);
-
-        if (existing_md == md)
-            reuse_existing = true;
-        else
-            existing_but_not_matching = true;
-    } catch (std::exception& e){
+    if (name != "") {
+        svc_md_name = string("robotkernel/") + name;
+    } else {
+        name = _svc.name;
+        string prefix = _clnt.clnt->name + "." + _svc.owner + ".";
+        size_t svc_hash = hash<string>()(prefix);
+        svc_md_name = to_string(svc_hash) + "." + name;
     }
 
     // create service name
     string svc_name = _clnt.clnt->name + "." + _svc.owner + "." + _svc.name;
-    string svc_md_name;
-
-    if (reuse_existing || !existing_but_not_matching) {
-        svc_md_name = _svc.name;
-    } else {
-        string prefix = _clnt.clnt->name + "." + _svc.owner + ".";
-        size_t svc_hash = hash<string>()(prefix);
-        svc_md_name = to_string(svc_hash) + "." + _svc.name;
-    }
 
     // put ln message definition. this will create 
     // ~/ln_message_definitions/gen/<svc_name>
@@ -600,6 +587,10 @@ void ln_bridge::service::_create_ln_message_defition() {
     std::stringstream ss_md, ss_signature;
     YAML::Node message_definition = YAML::Load(_svc.service_definition);
     ss_md << "service" << endl;
+
+    if (message_definition["name"]) {
+        name = message_definition["name"].as<string>();
+    }
 
     if (message_definition["request"]) {
         ss_md << "request" << endl;
