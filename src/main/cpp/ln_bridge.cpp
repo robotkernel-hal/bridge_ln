@@ -539,6 +539,8 @@ void ln_bridge::service::_process_node(const YAML::Node& node,
         for (const auto& kv : *it) {
             string key   = kv.first.as<string>();
             string value = kv.second.as<string>();
+            
+            std::replace(value.begin(), value.end(), '.', '_');
 
             if (starts_with(key, "vector")) {
                 const size_t equals_idx = key.find_first_of('/');
