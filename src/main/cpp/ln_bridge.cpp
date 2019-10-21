@@ -5,6 +5,7 @@
 #include "robotkernel/kernel.h"
 
 #include <functional>
+#include <algorithm>
 
 using namespace std;
 using namespace std::placeholders;
