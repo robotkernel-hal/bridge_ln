@@ -84,6 +84,7 @@ class service {
         std::string md;
         std::map<std::string, std::string> sub_mds;
         std::string signature;
+        std::string name;
 
         int handle(ln::service_request& req);
 
