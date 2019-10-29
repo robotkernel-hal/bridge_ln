@@ -10,7 +10,9 @@ class MainProject(ConanFile):
     exports_sources = ["*", "!.gitignore"] + ["!%s" % x for x in tools.Git().excluded_files()]
 
     generators = "pkg_config"
-    requires = "robotkernel/[~=5.0]@robotkernel/unstable", "links_and_nodes/0.12.2@robotkernel/unstable"
+    requires = (
+            "robotkernel/[~=5.0]@robotkernel/stable",
+            "links_and_nodes/0.12.2@robotkernel/unstable" )
 
     def source(self):
         filedata = None
