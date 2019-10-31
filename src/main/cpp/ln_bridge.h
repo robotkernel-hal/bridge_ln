@@ -5,8 +5,8 @@
 #include "robotkernel/service.h"
 #include "robotkernel/runnable.h"
 
-#include "ln.h"
-#include "ln_cppwrapper.h"
+#include "ln/ln.h"
+#include "ln/cppwrapper.h"
 #include "robotkernel/bridge_base.h"
 
 namespace ln_bridge {

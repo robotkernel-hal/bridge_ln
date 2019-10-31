@@ -12,7 +12,7 @@ class MainProject(ConanFile):
     generators = "pkg_config"
     requires = (
             "robotkernel/[~=5.0]@robotkernel/stable",
-            "links_and_nodes/0.12.2@robotkernel/unstable" )
+            "liblinks_and_nodes/master@common/snapshot" )
 
     def source(self):
         filedata = None
