@@ -317,24 +317,6 @@ int ln_bridge::service::handle(ln::service_request& req) {
                             }                                                                                       \
                             service_request.push_back(entries);                                                     \
                         }
-
-#define add_vector_type_char(type) \
-                        if (ln_dt == #type) {                                                                       \
-                            ((uint32_t *)adr)[0] = (uint32_t)elem.size();                                           \
-                            adr += 4;                                                                               \
-                            \
-                            ln_vector_t* entries = new ln_vector_t[elem.size()];                                    \
-                            to_delete.push_back((uint8_t *)entries);                                                \
-                            \
-                            for (unsigned i = 0; i < elem.size(); ++i) {                                            \
-                                string entry = elem[i];                                                             \
-                                entries[i].len = entry.length();                                                    \
-                                entries[i].val = (const uint8_t *)entry.c_str();                                    \
-                            }                                                                                       \
-                            ((ln_vector_t **)adr)[0] = entries;                                                     \
-                            adr += sizeof(void*);                                                                   \
-                        }
-
                         add_vector_type(uint64_t);
                         add_vector_type(int64_t);
                         add_vector_type(uint32_t);
@@ -345,9 +327,23 @@ int ln_bridge::service::handle(ln::service_request& req) {
                         add_vector_type(int8_t);
                         add_vector_type(float);
                         add_vector_type(double);
-                        //                    add_vector_type_char(char*);
-#undef add_vector_type_char
 #undef add_vector_type
+
+#define add_vector_type_char(type) \
+                        if (ln_dt == #type) {                                                                       \
+                            uint32_t len = ((uint32_t *)adr)[0];                                                    \
+                            adr += 4;                                                                               \
+                            \
+                            std::vector<rk_type> entries(len);                                                      \
+                            ln_vector_t* lnentries = *(ln_vector_t **)adr;                                            \
+                            \
+                            for (unsigned i = 0; i < len; ++i) {                                                    \
+                                entries[i] = string((char *)lnentries[i].val, lnentries[i].len);                    \
+                            }                                                                                       \
+                            service_request.push_back(entries);                                                     \
+                        }
+                        add_vector_type_char(char*);
+#undef add_vector_type_char
                     }
 
                 } else if (ends_with(ln_dt, string("*"))) {               
