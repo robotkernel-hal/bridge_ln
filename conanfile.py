@@ -9,5 +9,5 @@ class MainProject(base.RobotkernelConanFile):
 
     def requirements(self):
         self.requires("robotkernel/[~=5]@robotkernel/stable")
-        self.requires("liblinks_and_nodes/[~=1]@common/unstable")
+        self.requires("liblinks_and_nodes/[~=1]@common/stable")
 
