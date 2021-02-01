@@ -8,6 +8,6 @@ class MainProject(base.RobotkernelConanFile):
     exports_sources = ["*", "!.gitignore"] + ["!%s" % x for x in tools.Git().excluded_files()]
 
     def requirements(self):
-        self.requires("robotkernel/[~=5]@robotkernel/stable")
+        self.requires("robotkernel/[~=6]@robotkernel/unstable")
         self.requires("liblinks_and_nodes/[~=1]@common/stable")
 
