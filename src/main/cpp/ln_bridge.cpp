@@ -239,14 +239,27 @@ void ln_bridge::service::register_service() {
     }
 
     if (!already_put) {
-        _clnt.log(verbose, "putting md %s\n", svc_md_name.c_str());
-        _clnt.clnt->put_message_definition(svc_md_name, md);
-        _clnt.stored_mds[svc_md_name] = md;
+        try {
+            std::string message_definition;
+            unsigned int message_size;
+            std::string hash;
+
+            _clnt.clnt->get_message_definition(svc_md_name,
+					       message_definition, message_size, hash);
+
+            _clnt.stored_mds[svc_md_name] = md;
+        } catch(exception& e) {
+            _clnt.log(verbose, "putting md %s\n", svc_md_name.c_str());
+            _clnt.clnt->put_message_definition(svc_md_name, md);
+        
+            _clnt.stored_mds[svc_md_name] = md;
+            svc_md_name = "gen/" + svc_md_name;
+        }
     }
 
     // get ln service provider
     _ln_service = _clnt.clnt->get_service_provider(
-            svc_name, string("gen/" + svc_md_name), signature);
+            svc_name, svc_md_name, signature);
 
     // set handler and register
     _ln_service->set_handler(&ln_bridge::service::service_cb, this);
