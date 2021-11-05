@@ -1,6 +1,6 @@
 ACLOCAL_AMFLAGS = -I m4
 
-LDADD = $(top_builddir)/src/main/cpp/.libs/libbridge_ln.la @ROBOTKERNEL_LIBS@ -llttng-ust @LINKS_AND_NODES_LIBS@
+LDADD = @ROBOTKERNEL_LIBS@ -llttng-ust @LINKS_AND_NODES_LIBS@
 #AM_LDFLAGS = -Wl,--whole-archive,librobotkernel.a,--no-whole-archive
  
 bin_PROGRAMS = bridge_ln_generator
