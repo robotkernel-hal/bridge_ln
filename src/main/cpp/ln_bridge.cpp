@@ -528,7 +528,9 @@ int ln_bridge::service::handle(ln::service_request& req) {
 }
 
 void ln_bridge::service::_process_node(const YAML::Node& node,
-        std::stringstream& ss_md, std::stringstream& ss_signature) {
+        std::stringstream& ss_md, std::stringstream& ss_signature,
+        std::map<std::string, std::string>& sub_mds)
+{
     std::map<std::string, std::string> defines_map;
 
     for (YAML::const_iterator it = node.begin(); it != node.end(); ++it) {
@@ -621,7 +623,7 @@ void ln_bridge::service::_create_ln_message_defition() {
         ss_md << "request" << endl;
 
         const YAML::Node& request = message_definition["request"];
-        _process_node(request, ss_md, ss_signature);
+        _process_node(request, ss_md, ss_signature, sub_mds);
     }
 
     ss_signature << "|";
@@ -629,10 +631,45 @@ void ln_bridge::service::_create_ln_message_defition() {
     if (message_definition["response"]) {
         ss_md << "response" << endl;
         const YAML::Node& response = message_definition["response"];
-        _process_node(response, ss_md, ss_signature);
+        _process_node(response, ss_md, ss_signature, sub_mds);
     }
 
     signature = ss_signature.str();
     md = ss_md.str();
 }
 
+void ln_bridge::service::create_ln_message_defition(const std::string& sd,
+        std::map<std::string, std::string>& mds_map) 
+{
+    std::stringstream ss_md, ss_signature;
+    YAML::Node message_definition = YAML::Load(sd);
+    ss_md << "service" << endl;
+    string name;
+    string signature;
+    string md;
+    std::map<std::string, std::string> sub_mds;
+
+    if (message_definition["name"]) {
+        name = message_definition["name"].as<string>();
+    }
+
+    if (message_definition["request"]) {
+        ss_md << "request" << endl;
+
+        const YAML::Node& request = message_definition["request"];
+        ln_bridge::service::_process_node(request, ss_md, ss_signature, mds_map);
+    }
+
+    ss_signature << "|";
+
+    if (message_definition["response"]) {
+        ss_md << "response" << endl;
+        const YAML::Node& response = message_definition["response"];
+        ln_bridge::service::_process_node(response, ss_md, ss_signature, mds_map);
+    }
+
+    signature = ss_signature.str();
+    md = ss_md.str();
+
+    mds_map[name] = md;
+}
