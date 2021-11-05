@@ -529,6 +529,8 @@ int ln_bridge::service::handle(ln::service_request& req) {
 
 void ln_bridge::service::_process_node(const YAML::Node& node,
         std::stringstream& ss_md, std::stringstream& ss_signature) {
+    std::map<std::string, std::string> defines_map;
+
     for (YAML::const_iterator it = node.begin(); it != node.end(); ++it) {
         if (it != node.begin())
             ss_signature << ",";
@@ -559,12 +561,25 @@ void ln_bridge::service::_process_node(const YAML::Node& node,
                     } else {
                         ss_signature << "uint32_t 4 1,[";
 
-                        stringstream ss_sub_md;
-                        ss_sub_md << ln_dt << " data" << endl;//<< real_key << endl;
-                        sub_mds[key] = ss_sub_md.str();
+                        string sub_md_name = format_string("gen/%s", key.c_str());
 
-                        ss_md << "define " << key << " as \"gen/" << key << "\"" << endl;
-                        ss_md << key << "* " << value << endl;
+                        if (real_key == "string") {
+                            // special case, use ln builtin type for that
+                            sub_md_name = "ln/string";
+                        } else {
+                            stringstream ss_sub_md;
+                            ss_sub_md << ln_dt << " data" << endl;//<< real_key << endl;
+                            sub_mds[key] = ss_sub_md.str();
+                        }
+
+                        if (defines_map.find(real_key) == defines_map.end()) {
+                            ss_md << "define " << real_key << " as \"" << sub_md_name << "\"" << endl;
+                            defines_map[real_key] = sub_md_name;
+                        } else if (defines_map[real_key] != sub_md_name) {                            
+                            cout << "error: defines_map[" << real_key << "]=" << defines_map[real_key] << ", but we need " << sub_md_name << endl;
+                        }
+
+                        ss_md << real_key << "* " << value << endl;
 
                         if (ends_with(ln_dt, string("*")))
                             ss_signature << "uint32_t 4 1,";
