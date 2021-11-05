@@ -39,7 +39,7 @@ AC_CHECK_FUNCS([strdup])
 # Checks for library functions.
 AC_CHECK_LIB(dl, dlopen)
 
-AC_CONFIG_FILES([Makefile src/main/cpp/Makefile bridge_ln.pc])
+AC_CONFIG_FILES([Makefile src/main/cpp/Makefile src/generator/cpp/Makefile bridge_ln.pc])
 
 AC_OUTPUT
 
