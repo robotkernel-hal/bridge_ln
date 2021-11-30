@@ -21,8 +21,7 @@
  */
 
 #include "ln_bridge.h"
-#include "md_creator.h"
-
+#include "ln_md_helper.h"
 #include "robotkernel/helpers.h"
 #include "robotkernel/service.h"
 #include "robotkernel/rk_type.h"
@@ -35,6 +34,7 @@ using namespace std;
 using namespace std::placeholders;
 using namespace robotkernel;
 using namespace string_util;
+using namespace ln_md_helper;
 
 BRIDGE_DEF(bridge_ln, ln_bridge::client);
 
@@ -494,7 +494,7 @@ void ln_bridge::service::_create_ln_message_defition() {
         ss_md << "request" << endl;
 
         const YAML::Node& request = message_definition["request"];
-        process_node(request, ss_md, ss_signature, sub_mds);
+        ln_md_helper::process_node(request, ss_md, ss_signature, sub_mds);
     }
 
     ss_signature << "|";
@@ -502,7 +502,7 @@ void ln_bridge::service::_create_ln_message_defition() {
     if (message_definition["response"]) {
         ss_md << "response" << endl;
         const YAML::Node& response = message_definition["response"];
-        process_node(response, ss_md, ss_signature, sub_mds);
+        ln_md_helper::process_node(response, ss_md, ss_signature, sub_mds);
     }
 
     signature = ss_signature.str();

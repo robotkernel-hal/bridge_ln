@@ -6,7 +6,7 @@
 #include <errno.h>
 
 #include <list>
-#include "md_creator.h"
+#include "ln_md_helper.h"
 #include <fstream>
 typedef void (*get_sd_t)(std::list<std::string>& sd_list);
 
@@ -71,7 +71,7 @@ int main(int argc, char **argv) {
 
         (*get_sd)(sd_list);
         for (const auto& el : sd_list) {
-            ln_bridge::create_ln_message_defition(el, ln_mds_map);
+            ln_md_helper::create_ln_message_defition(el, ln_mds_map);
         }
 
         for (const auto& kv : ln_mds_map) {
