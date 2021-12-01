@@ -223,7 +223,7 @@ void ln_bridge::service::register_service() {
 //! destruct ln_bridge service
 ln_bridge::service::~service() {
     if (_ln_service) {
-        _clnt.clnt->unregister_service_provider(_ln_service);
+        _clnt.clnt->release_service(_ln_service);
         _ln_service = NULL;
     }
 }
