@@ -85,7 +85,7 @@ void ln_bridge::client::run() {
         } else {
             try {
                 log(verbose, "creating new ln client...\n");
-                clnt = new ln::client(k._name, k.main_argc, k.main_argv);
+                clnt = new ln::client(name, k.main_argc, k.main_argv);
                 clnt->set_max_threads("main", 16);
 
                 pthread_mutex_lock(&service_map_lock);
