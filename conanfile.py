@@ -13,5 +13,4 @@ class MainProject(base.RobotkernelConanFile):
     
     def build_requirements(self):
         self.build_requires("robotkernel/[~=5]@robotkernel/stable")
-        self.build_requires("liblinks_and_nodes/[>=1.2.3 <3]@common/stable") 
 
