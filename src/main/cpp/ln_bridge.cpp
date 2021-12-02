@@ -47,6 +47,17 @@ ln_bridge::client::client(const char*& bridgename, YAML::Node& node) :
     pthread_mutex_init(&service_map_lock, NULL);
 
     group_name = format_string("ln_bridge_%s", bridgename);
+
+    string umd = get_as<string>(node, "upload_message_definitions", "never");
+    if (umd == "never") {
+        upload_message_definitions = never;
+    } else if (umd == "on_demand") {
+        upload_message_definitions = on_demand;
+    } else if (umd == "always") {
+        upload_message_definitions = always;
+    } else {
+        throw str_exception("key \"upload_message_definitions\" has to be one of [ \"never\", \"on_demand\", \"always\" ]");
+    }
 }
 
 //! destruct ln_bridge client
@@ -187,31 +198,40 @@ void ln_bridge::service::register_service() {
         _clnt.clnt->put_message_definition(it->first, it->second);
     }
 
-    bool already_put = false;
-    for (const auto& kv : _clnt.stored_mds) {
-        if (!kv.second.compare(md)) {
-            already_put = true;
-            svc_md_name = kv.first;
-            break;
+    if (_clnt.upload_message_definitions != client::never) {
+        bool already_put = false;
+        for (const auto& kv : _clnt.stored_mds) {
+            if (!kv.second.compare(md)) {
+                already_put = true;
+                svc_md_name = kv.first;
+                break;
+            }
         }
-    }
 
-    if (!already_put) {
-        try {
-            std::string message_definition;
-            unsigned int message_size;
-            std::string hash;
+        if (!already_put) {
+            bool needs_upload = true;
 
-            _clnt.clnt->get_message_definition(svc_md_name,
-					       message_definition, message_size, hash);
+            if (_clnt.upload_message_definitions == client::on_demand) {
+                try {
+                    std::string message_definition;
+                    unsigned int message_size;
+                    std::string hash;
 
-            _clnt.stored_mds[svc_md_name] = md;
-        } catch(exception& e) {
-            _clnt.log(verbose, "putting md %s\n", svc_md_name.c_str());
-            _clnt.clnt->put_message_definition(svc_md_name, md);
-        
-            _clnt.stored_mds[svc_md_name] = md;
-            svc_md_name = "gen/" + svc_md_name;
+                    _clnt.clnt->get_message_definition(svc_md_name,
+                            message_definition, message_size, hash);
+
+                    _clnt.stored_mds[svc_md_name] = md;
+                    needs_upload = false;
+                } catch(exception& e) {}
+            }
+
+            if (needs_upload) {
+                _clnt.log(verbose, "putting md %s\n", svc_md_name.c_str());
+                _clnt.clnt->put_message_definition(svc_md_name, md);
+
+                _clnt.stored_mds[svc_md_name] = md;
+                svc_md_name = "gen/" + svc_md_name;
+            }
         }
     }
 

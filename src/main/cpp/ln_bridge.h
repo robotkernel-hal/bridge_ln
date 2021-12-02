@@ -78,6 +78,12 @@ class client :
         std::map<std::string, std::string> stored_mds;
 
         std::string group_name;
+
+        enum {
+            never     = 0,
+            on_demand = 1,
+            always    = 2
+        } upload_message_definitions;
 };
 
 class service {
