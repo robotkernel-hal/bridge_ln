@@ -1,7 +1,7 @@
 from conans import ConanFile, tools
 
 class MainProject(ConanFile):
-    python_requires = "conan_template_ln_generator/[~=5 >=5.0.5]@robotkernel/stable"
+    python_requires = "conan_template_ln_generator/[~=5 >=5.0.7]@robotkernel/stable"
     python_requires_extend = "conan_template_ln_generator.RobotkernelLNGeneratorConanFile"
 
     name = "bridge_ln"
@@ -13,5 +13,6 @@ class MainProject(ConanFile):
         self.requires("liblinks_and_nodes/[>=1.2.3 <3]@common/stable") 
     
     def build_requirements(self):
+        self.build_requires("ln_helper/master@robotkernel/snapshot")
         self.build_requires("robotkernel/[~=5]@robotkernel/stable")
 

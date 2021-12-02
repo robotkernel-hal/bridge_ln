@@ -26,6 +26,7 @@ m4_ifdef([PKG_INSTALLDIR], [PKG_INSTALLDIR], [pkgconfigdir='${libdir}/pkgconfig'
 # Check dependencies
 PKG_CHECK_MODULES([ROBOTKERNEL], [robotkernel])
 PKG_CHECK_MODULES([LINKS_AND_NODES], [liblinks_and_nodes])
+PKG_CHECK_MODULES([LN_HELPER], [ln_helper])
 
 # Checks for header files.
 AC_CHECK_HEADERS([stdlib.h string.h termios.h])
@@ -39,7 +40,7 @@ AC_CHECK_FUNCS([strdup])
 # Checks for library functions.
 AC_CHECK_LIB(dl, dlopen)
 
-AC_CONFIG_FILES([Makefile src/main/cpp/Makefile src/generator/cpp/Makefile bridge_ln.pc])
+AC_CONFIG_FILES([Makefile src/main/cpp/Makefile bridge_ln.pc])
 
 AC_OUTPUT
 
