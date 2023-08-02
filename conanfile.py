@@ -13,6 +13,6 @@ class MainProject(ConanFile):
         self.requires("liblinks_and_nodes/[>=1.2.3 <3]@common/stable") 
     
     def build_requirements(self):
-        self.build_requires("ln_helper/master@robotkernel/snapshot")
+        self.build_requires("ln_helper/[~=0]@robotkernel/stable")
         self.build_requires("robotkernel/[~=5]@robotkernel/stable")
 

@@ -177,7 +177,18 @@ void ln_bridge::service::register_service() {
     kernel& k = *kernel::get_instance();
 
     if (name != "") {
-        svc_md_name = string("robotkernel/") + name;
+        svc_md_name = name;
+
+        try {
+            std::string message_definition;
+            unsigned int message_size;
+            std::string hash;
+
+            _clnt.clnt->get_message_definition(name,
+                    message_definition, message_size, hash);
+        } catch(exception& e) {
+            svc_md_name = string("robotkernel/") + name;
+        }
     } else {
         name = _svc.name;
         string prefix = _clnt.clnt->name + "." + _svc.owner + ".";
