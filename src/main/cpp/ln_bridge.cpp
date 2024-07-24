@@ -88,10 +88,7 @@ void ln_bridge::client::run() {
 
     while (running()) {
         if (clnt) {
-            //clnt->wait_and_handle_service_group_requests(NULL, 0.1);
-            clnt->handle_service_group_in_thread_pool(group_name.c_str(), "main");
-
-            struct timespec ts = { 0, 1000000 };
+            struct timespec ts = { 0, 100000000 };
             nanosleep(&ts, NULL);
         } else {
             try {
@@ -106,6 +103,7 @@ void ln_bridge::client::run() {
                     it->second->register_service();
                 }
 
+                clnt->handle_service_group_in_thread_pool(group_name.c_str(), "main");
                 pthread_mutex_unlock(&service_map_lock);
             } catch(exception& e) {
                 log(warning, "creating ln client failed: %s\n", e.what());
