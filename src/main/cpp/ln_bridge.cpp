@@ -335,10 +335,11 @@ int ln_bridge::service::handle(ln::service_request& req) {
                             adr += 4;                                                                               \
                             \
                             std::vector<rk_type> entries(len);                                                      \
-                            ln_vector_t* lnentries = *(ln_vector_t **)adr;                                            \
+                            ln_vector_t* lnentries = *(ln_vector_t **)adr;                                          \
+                            adr += sizeof(ln_vector_t *);                                                           \
                             \
                             for (unsigned i = 0; i < len; ++i) {                                                    \
-                                entries[i] = string((char *)lnentries[i].val, lnentries[i].len);                    \
+                                entries[i] = string((char *)(lnentries[i].val), (lnentries[i].len));                \
                             }                                                                                       \
                             service_request.push_back(entries);                                                     \
                         }
