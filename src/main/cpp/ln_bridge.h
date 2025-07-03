@@ -23,7 +23,7 @@
 #ifndef LN_BRIDGE_H
 #define LN_BRIDGE_H
 
-#include "robotkernel/kernel.h"
+#include "robotkernel/robotkernel.h"
 #include "robotkernel/service.h"
 #include "robotkernel/runnable.h"
 

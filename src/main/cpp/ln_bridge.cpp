@@ -25,7 +25,7 @@
 #include "robotkernel/helpers.h"
 #include "robotkernel/service.h"
 #include "robotkernel/rk_type.h"
-#include "robotkernel/kernel.h"
+#include "robotkernel/robotkernel.h"
 
 #include <functional>
 #include <algorithm>
@@ -84,8 +84,6 @@ void ln_bridge::client::init() {
 
 //!< handler function called if thread is running
 void ln_bridge::client::run() {
-    kernel& k = *kernel::get_instance();
-
     while (running()) {
         if (clnt) {
             struct timespec ts = { 0, 100000000 };
@@ -93,7 +91,7 @@ void ln_bridge::client::run() {
         } else {
             try {
                 log(verbose, "creating new ln client...\n");
-                clnt = new ln::client(name, k.main_argc, k.main_argv);
+                clnt = new ln::client(name, 0, NULL);
                 clnt->set_max_threads("main", 16);
 
                 pthread_mutex_lock(&service_map_lock);
@@ -172,7 +170,6 @@ void ln_bridge::service::register_service() {
         return;
 
     string svc_md_name;
-    kernel& k = *kernel::get_instance();
 
     if (name != "") {
         svc_md_name = name;
@@ -196,9 +193,6 @@ void ln_bridge::service::register_service() {
 
     // create service name
     string svc_name = _clnt.clnt->name + "." + _svc.owner + "." + _svc.name;
-    if (_svc.owner == k._name) {
-        svc_name = _clnt.clnt->name + "." + _svc.name;
-    }
 
     // put ln message definition. this will create 
     // ~/ln_message_definitions/gen/<svc_name>
