@@ -49,7 +49,7 @@ jobs:
         fi
 
         test -f configure || autoreconf -if
-        ./configure
+        LINKS_AND_NODES_CFLAGS="-I/usr/include" LINKS_AND_NODES_LIBS="-L/usr/lib -lln" ./configure
         
     - name: make
       run: make
