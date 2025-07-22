@@ -52,7 +52,7 @@ jobs:
 
         git clone https://github.com/robotkernel-hal/ln_helper.git
         LINKS_AND_NODES_CFLAGS="-I/usr/include" LINKS_AND_NODES_LIBS="-L/usr/lib -lln" \
-        LN_HELPER_CFLAGS="-I./ln_helper/src/main_cpp" LN_HELPER_LIBS="" \
+        LN_HELPER_CFLAGS="-I./ln_helper/src/main_cpp" LN_HELPER_LIBS=" " \
         ./configure
         
     - name: make
