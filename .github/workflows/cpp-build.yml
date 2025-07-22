@@ -27,7 +27,7 @@ jobs:
         test -f configure || autoreconf -if
         mkdir -p build
         cd build
-        test -f Makefile || ../configure "--prefix=$INSTALL"
+        test -f Makefile || ../configure "--prefix=/usr"
         sudo make -j4 install
         
     - name: build links-and-nodes
