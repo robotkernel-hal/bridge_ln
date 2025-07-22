@@ -30,7 +30,7 @@ jobs:
         test -f Makefile || ../configure "--prefix=/usr"
         sudo make -j4 install
         
-    - name: Build links-and-nodes
+    - name: Build and install links-and-nodes
       shell: bash
       run: |
         git clone -b 2.4.4 --recurse-submodules https://gitlab.com/links_and_nodes/links_and_nodes
@@ -40,7 +40,7 @@ jobs:
     - name: Configure
       run: |
         if [ ! -f configure.ac ]; then
-          VERSION=$(dpkg-parsechangelog | sed -n 's/^Version: //p') 
+          VERSION=$(echo "${{ github.ref_name }}" | tr '/:' '--')
           sed "s|PACKAGE_VERSION|$VERSION|" configure.ac.in > configure.ac
         fi
 
