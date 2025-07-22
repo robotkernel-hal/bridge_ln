@@ -29,11 +29,10 @@
 
 #include <functional>
 #include <algorithm>
+#include <stdexcept>
 
 using namespace std;
-using namespace std::placeholders;
 using namespace robotkernel;
-using namespace string_util;
 using namespace ln_md_helper;
 
 BRIDGE_DEF(bridge_ln, ln_bridge::client);
@@ -46,7 +45,7 @@ ln_bridge::client::client(const char*& bridgename, YAML::Node& node) :
 {
     pthread_mutex_init(&service_map_lock, NULL);
 
-    group_name = format_string("ln_bridge_%s", bridgename);
+    group_name = string_printf("ln_bridge_%s", bridgename);
 
     string umd = get_as<string>(node, "upload_message_definitions", "never");
     if (umd == "never") {
@@ -56,7 +55,7 @@ ln_bridge::client::client(const char*& bridgename, YAML::Node& node) :
     } else if (umd == "always") {
         upload_message_definitions = always;
     } else {
-        throw str_exception("key \"upload_message_definitions\" has to be one of [ \"never\", \"on_demand\", \"always\" ]");
+        throw runtime_error("key \"upload_message_definitions\" has to be one of [ \"never\", \"on_demand\", \"always\" ]");
     }
 }
 

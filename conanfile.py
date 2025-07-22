@@ -16,3 +16,7 @@ class MainProject(ConanFile):
         self.requires("libstring_util/[~1]@common/stable")
         self.requires("liblinks_and_nodes/[>=1.2.3 <3]@common/stable")
         self.requires("ln_helper/[~0]@robotkernel/stable")
+    
+    def source(self):
+        self.run(f"sed 's/AC_INIT(.*/AC_INIT([bridge_ln], [{self.version}], [{self.author}])/' configure.ac.in > configure.ac")
+
