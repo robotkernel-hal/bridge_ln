@@ -20,7 +20,7 @@ jobs:
         
     - uses: actions/checkout@v4
 
-    - name: build and install libstring_util
+    - name: Build and install libstring_util
       run: |
         git clone -b 1.2.9 --recursive https://gitlab.com/links_and_nodes/libstring_util
         cd libstring_util
@@ -30,17 +30,26 @@ jobs:
         test -f Makefile || ../configure "--prefix=/usr"
         sudo make -j4 install
         
-    - name: build links-and-nodes
+    - name: Build links-and-nodes
       shell: bash
       run: |
         git clone -b 2.4.4 --recurse-submodules https://gitlab.com/links_and_nodes/links_and_nodes
         cd links_and_nodes
         sudo scons --use-private-libtomcrypt --write-env install
 
-    - name: configure
-      run: ./configure
+    - name: Configure
+      run: |
+        if [ ! -f configure.ac ]; then
+          VERSION=$(dpkg-parsechangelog | sed -n 's/^Version: //p') 
+          sed "s|PACKAGE_VERSION|$VERSION|" configure.ac.in > configure.ac
+        fi
+
+        test -f configure || autoreconf -if
+        ./configure
+        
     - name: make
       run: make
+      
     - name: make check
       run: make check
     - name: make distcheck
