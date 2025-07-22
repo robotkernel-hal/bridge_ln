@@ -35,7 +35,9 @@ jobs:
       run: |
         git clone -b 2.4.4 --recurse-submodules https://gitlab.com/links_and_nodes/links_and_nodes
         cd links_and_nodes
-    
+        scons --use-private-libtomcrypt --write-env 
+        sudo scons install
+
     - name: configure
       run: ./configure
     - name: make
