@@ -1,0 +1,37 @@
+name: C++ CI
+
+on:
+  push:
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: build and install libstring_util
+      run: |
+        git clone -b 1.2.9 --recursive https://gitlab.com/links_and_nodes/libstring_util
+        cd libstring_util
+        test -f configure || autoreconf -if
+        mkdir -p build
+        cd build
+        test -f Makefile || ../configure "--prefix=$INSTALL"
+        make -j4 install
+        
+    - name: build links-and-nodes
+      shell: bash
+      run: |
+        git clone -b 2.4.4 --recurse-submodules https://gitlab.com/links_and_nodes/links_and_nodes
+        cd links_and_nodes
+    
+    - name: configure
+      run: ./configure
+    - name: make
+      run: make
+    - name: make check
+      run: make check
+    - name: make distcheck
+      run: make distcheck
