@@ -49,8 +49,8 @@ jobs:
         cd links_and_nodes/libln
         ../python/links_and_nodes_base/ln_generate -o include/ln/client_lib_messages.h --md-dir ../share/message_definitions ln2/request_topic ln/parameters/query ln/parameters/query_dict ln/parameters/override_dict_single ln/parameters/request_parameter_topic ln/event/call ln/event/connect ln/log_service
         python3 ./scripts/generate_ln_errors_h include/ln/ln.h include/ln/errors.h
-        for f in src/*.c; do echo compiling $f; gcc $f -Iinclude -Isrc -c -D__LINUX__ -DLTM_DESC -DUSE_LTM ; done
-        echo compiling src/sharedlnclient.cpp; g++ src/sharedlnclient.cpp  -Iinclude -Isrc -c -D__LINUX__ -DLTM_DESC -DUSE_LTM
+        for f in src/*.c; do echo compiling $f; gcc $f -fPIC -Iinclude -Isrc -c -D__LINUX__ -DLTM_DESC -DUSE_LTM ; done
+        echo compiling src/sharedlnclient.cpp; g++ -fPIC src/sharedlnclient.cpp  -Iinclude -Isrc -c -D__LINUX__ -DLTM_DESC -DUSE_LTM
         echo creating libln.a; ar cr libln.a *.o
         cd ../..
         
