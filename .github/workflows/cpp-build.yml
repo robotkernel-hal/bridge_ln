@@ -55,7 +55,7 @@ jobs:
         cd ../..
         
         LINKS_AND_NODES_CFLAGS="-Ilinks_and_nodes/libln/include" LINKS_AND_NODES_LIBS="links_and_nodes/lib/libln.a" \
-        LN_HELPER_CFLAGS="-I$(pwd)/ln_helper/src/main/cpp" LN_HELPER_LIBS=" " \        
+        LN_HELPER_CFLAGS="-I$(pwd)/ln_helper/src/main/cpp" LN_HELPER_LIBS=" " \
         ./configure
         
     - name: make
