@@ -31,7 +31,7 @@ jobs:
         test -f configure || autoreconf -if
         mkdir -p build
         cd build
-        test -f Makefile || ../configure "--prefix=/usr"
+        test -f Makefile || ../configure "--prefix=/usr" --disable-shared --with-pic
         sudo make -j4 install
         
     - name: Configure
