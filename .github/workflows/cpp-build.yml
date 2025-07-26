@@ -54,7 +54,7 @@ jobs:
         echo creating libln.a; ar cr libln.a *.o
         cd ../..
         
-        LINKS_AND_NODES_CFLAGS="-Ilinks_and_nodes/libln/include" LINKS_AND_NODES_LIBS="links_and_nodes/lib/libln.a" \
+        LINKS_AND_NODES_CFLAGS="-I$(pwd)/links_and_nodes/libln/include" LINKS_AND_NODES_LIBS="$(pwd)/links_and_nodes/lib/libln.a" \
         LN_HELPER_CFLAGS="-I$(pwd)/ln_helper/src/main/cpp" LN_HELPER_LIBS=" " \
         ./configure
         
