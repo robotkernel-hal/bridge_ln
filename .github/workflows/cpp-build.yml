@@ -53,9 +53,13 @@ jobs:
         echo compiling src/sharedlnclient.cpp; g++ -fPIC src/sharedlnclient.cpp  -Iinclude -Isrc -c -D__LINUX__ -DLTM_DESC -DUSE_LTM
         echo creating libln.a; ar cr libln.a *.o
         cd ../..
-        
-        LINKS_AND_NODES_CFLAGS="-I$(pwd)/links_and_nodes/libln/include" LINKS_AND_NODES_LIBS="$(pwd)/links_and_nodes/libln/libln.a" \
-        LN_HELPER_CFLAGS="-I$(pwd)/ln_helper/src/main/cpp" LN_HELPER_LIBS=" " CXXFLAGS="$(pkg-config --cflags libstring_util)" LDFLAGS="$(pkg-config --libs libstring_util)" \
+
+        export CXXFLAGS="$(pkg-config --cflags libstring_util)" 
+        export LDFLAGS="$(pkg-config --libs libstring_util)"
+        export LINKS_AND_NODES_CFLAGS="-I$(pwd)/links_and_nodes/libln/include" 
+        export LINKS_AND_NODES_LIBS="$(pwd)/links_and_nodes/libln/libln.a"
+        export LN_HELPER_CFLAGS="-I$(pwd)/ln_helper/src/main/cpp"
+        export LN_HELPER_LIBS=" "
         ./configure
         
     - name: make
