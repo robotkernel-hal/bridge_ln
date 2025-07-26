@@ -55,7 +55,7 @@ jobs:
         cd ../..
         
         LINKS_AND_NODES_CFLAGS="-I$(pwd)/links_and_nodes/libln/include" LINKS_AND_NODES_LIBS="$(pwd)/links_and_nodes/libln/libln.a" \
-        LN_HELPER_CFLAGS="-I$(pwd)/ln_helper/src/main/cpp" LN_HELPER_LIBS=" " CXXFLAGS="$(pkg-config --cflags libstring_util)" LDFLAGS="$(pkg-config --libs libstring_util)"\
+        LN_HELPER_CFLAGS="-I$(pwd)/ln_helper/src/main/cpp" LN_HELPER_LIBS=" " CXXFLAGS="$(pkg-config --cflags libstring_util)" LDFLAGS="$(pkg-config --libs libstring_util)" \
         ./configure
         
     - name: make
