@@ -34,13 +34,6 @@ jobs:
         test -f Makefile || ../configure "--prefix=/usr"
         sudo make -j4 install
         
-    - name: Build and install links-and-nodes
-      shell: bash
-      run: |
-        git clone -b 2.4.4 --recurse-submodules https://gitlab.com/links_and_nodes/links_and_nodes
-        cd links_and_nodes
-        sudo scons --use-private-libtomcrypt --write-env install
-
     - name: Configure
       run: |
         if [ ! -f configure.ac ]; then
@@ -51,8 +44,18 @@ jobs:
         test -f configure || autoreconf -if
 
         git clone https://github.com/robotkernel-hal/ln_helper.git
-        LINKS_AND_NODES_CFLAGS="-I/usr/include" LINKS_AND_NODES_LIBS="-L/usr/lib -lln" \
-        LN_HELPER_CFLAGS="-I$(pwd)/ln_helper/src/main/cpp" LN_HELPER_LIBS=" " \
+        git clone -b 2.4.4 --recurse-submodules https://gitlab.com/links_and_nodes/links_and_nodes
+
+        cd links_and_nodes/libln
+        ../python/links_and_nodes_base/ln_generate -o include/ln/client_lib_messages.h --md-dir ../share/message_definitions ln2/request_topic ln/parameters/query ln/parameters/query_dict ln/parameters/override_dict_single ln/parameters/request_parameter_topic ln/event/call ln/event/connect ln/log_service
+        python3 ./scripts/generate_ln_errors_h include/ln/ln.h include/ln/errors.h
+        for f in src/*.c; do gcc $f -Iinclude -Isrc -c -D__LINUX__ -DLTM_DESC -DUSE_LTM ; done
+        g++ src/sharedlnclient.cpp  -Iinclude -Isrc -c -D__LINUX__ -DLTM_DESC -DUSE_LTM
+        ar cr libln.a *.o
+        cd ../..
+        
+        LINKS_AND_NODES_CFLAGS="-Ilinks_and_nodes/libln/include" LINKS_AND_NODES_LIBS="links_and_nodes/lib/libln.a" \
+        LN_HELPER_CFLAGS="-I$(pwd)/ln_helper/src/main/cpp" LN_HELPER_LIBS=" " \        
         ./configure
         
     - name: make
