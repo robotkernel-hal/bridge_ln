@@ -25,15 +25,14 @@
 #include "robotkernel/helpers.h"
 #include "robotkernel/service.h"
 #include "robotkernel/rk_type.h"
-#include "robotkernel/kernel.h"
+#include "robotkernel/robotkernel.h"
 
 #include <functional>
 #include <algorithm>
+#include <stdexcept>
 
 using namespace std;
-using namespace std::placeholders;
 using namespace robotkernel;
-using namespace string_util;
 using namespace ln_md_helper;
 
 BRIDGE_DEF(bridge_ln, ln_bridge::client);
@@ -46,7 +45,7 @@ ln_bridge::client::client(const char*& bridgename, YAML::Node& node) :
 {
     pthread_mutex_init(&service_map_lock, NULL);
 
-    group_name = format_string("ln_bridge_%s", bridgename);
+    group_name = string_printf("ln_bridge_%s", bridgename);
 
     string umd = get_as<string>(node, "upload_message_definitions", "never");
     if (umd == "never") {
@@ -56,7 +55,7 @@ ln_bridge::client::client(const char*& bridgename, YAML::Node& node) :
     } else if (umd == "always") {
         upload_message_definitions = always;
     } else {
-        throw str_exception("key \"upload_message_definitions\" has to be one of [ \"never\", \"on_demand\", \"always\" ]");
+        throw runtime_error("key \"upload_message_definitions\" has to be one of [ \"never\", \"on_demand\", \"always\" ]");
     }
 }
 
@@ -84,8 +83,6 @@ void ln_bridge::client::init() {
 
 //!< handler function called if thread is running
 void ln_bridge::client::run() {
-    kernel& k = *kernel::get_instance();
-
     while (running()) {
         if (clnt) {
             struct timespec ts = { 0, 100000000 };
@@ -93,7 +90,7 @@ void ln_bridge::client::run() {
         } else {
             try {
                 log(verbose, "creating new ln client...\n");
-                clnt = new ln::client(name, k.main_argc, k.main_argv);
+                clnt = new ln::client(name, 0, NULL);
                 clnt->set_max_threads("main", 16);
 
                 pthread_mutex_lock(&service_map_lock);
@@ -172,7 +169,6 @@ void ln_bridge::service::register_service() {
         return;
 
     string svc_md_name;
-    kernel& k = *kernel::get_instance();
 
     if (name != "") {
         svc_md_name = name;
@@ -196,9 +192,6 @@ void ln_bridge::service::register_service() {
 
     // create service name
     string svc_name = _clnt.clnt->name + "." + _svc.owner + "." + _svc.name;
-    if (_svc.owner == k._name) {
-        svc_name = _clnt.clnt->name + "." + _svc.name;
-    }
 
     // put ln message definition. this will create 
     // ~/ln_message_definitions/gen/<svc_name>
