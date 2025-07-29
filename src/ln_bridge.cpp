@@ -292,42 +292,38 @@ int ln_bridge::service::handle(ln::service_request& req) {
                     {
                         //signature "uint32_t 4 1,[uint32_t 4 1,char* 1 1]* 8 1|uint32_t 4 1,[uint32_t 4 1,char* 1 1]* 8 1"
 
-                        string vector = key.substr(0, equals_idx);
-                        string real_key = key.substr(equals_idx + 1);
-                        string ln_dt = service_datatype_to_ln(real_key);
+                        key = key.substr(equals_idx + 1);
+                        ln_dt = service_datatype_to_ln(key);
 
 #define add_vector_type(type) \
-                        if (ln_dt == #type) {                                                                       \
+                        if (ln_dt.compare(#type) == 0) {                                                            \
                             uint32_t len = ((uint32_t *)adr)[0];                                                    \
                             adr += 4;                                                                               \
-                            \
                             std::vector<type> entries(len);                                                         \
                             type *tmp_adr = ((type **)adr)[0];                                                      \
                             memcpy(&entries[0], tmp_adr, sizeof(type) * len);                                       \
                             adr += sizeof(type *);                                                                  \
                             service_request.push_back(entries);                                                     \
                         }
-                        add_vector_type(uint64_t);
-                        add_vector_type(int64_t);
-                        add_vector_type(uint32_t);
-                        add_vector_type(int32_t);
-                        add_vector_type(uint16_t);
-                        add_vector_type(int16_t);
-                        add_vector_type(uint8_t);
-                        add_vector_type(int8_t);
-                        add_vector_type(float);
-                        add_vector_type(double);
+                        add_vector_type(uint64_t)
+                        else add_vector_type(int64_t)
+                        else add_vector_type(uint32_t)
+                        else add_vector_type(int32_t)
+                        else add_vector_type(uint16_t)
+                        else add_vector_type(int16_t)
+                        else add_vector_type(uint8_t)
+                        else add_vector_type(int8_t)
+                        else add_vector_type(float)
+                        else add_vector_type(double)
 #undef add_vector_type
 
 #define add_vector_type_char(type) \
-                        if (ln_dt == #type) {                                                                       \
+                        if (ln_dt.compare(#type) == 0) {                                                            \
                             uint32_t len = ((uint32_t *)adr)[0];                                                    \
                             adr += 4;                                                                               \
-                            \
                             std::vector<string> entries(len);                                                       \
                             ln_vector_t* lnentries = *(ln_vector_t **)adr;                                          \
                             adr += sizeof(ln_vector_t *);                                                           \
-                            \
                             for (unsigned i = 0; i < len; ++i) {                                                    \
                                 entries[i] = string((char *)(lnentries[i].val), (lnentries[i].len));                \
                             }                                                                                       \
@@ -341,32 +337,32 @@ int ln_bridge::service::handle(ln::service_request& req) {
                     service_request.push_back(((uint32_t *)adr)[0]);    //<! array length
                     adr += 4;                
 #define push_back_type(type) \
-                    if (ln_dt == #type) {                               \
+                    if (ln_dt.compare(#type) == 0) {                    \
                         service_request.push_back(((type*)adr)[0]);     \
                         adr += sizeof(type);                            \
                     }
 
-                    push_back_type(uint64_t*);
-                    push_back_type(int64_t*);
-                    push_back_type(uint32_t*);
-                    push_back_type(int32_t*);
-                    push_back_type(uint16_t*);
-                    push_back_type(int16_t*);
-                    push_back_type(uint8_t*);
-                    push_back_type(int8_t*);
-                    push_back_type(float*);
-                    push_back_type(double*);
+                    push_back_type(uint64_t*)
+                    else push_back_type(int64_t*)
+                    else push_back_type(uint32_t*)
+                    else push_back_type(int32_t*)
+                    else push_back_type(uint16_t*)
+                    else push_back_type(int16_t*)
+                    else push_back_type(uint8_t*)
+                    else push_back_type(int8_t*)
+                    else push_back_type(float*)
+                    else push_back_type(double*)
                 } else {
-                    push_back_type(uint64_t);
-                    push_back_type(int64_t);
-                    push_back_type(uint32_t);
-                    push_back_type(int32_t);
-                    push_back_type(uint16_t);
-                    push_back_type(int16_t);
-                    push_back_type(uint8_t);
-                    push_back_type(int8_t);
-                    push_back_type(float);
-                    push_back_type(double);
+                    push_back_type(uint64_t)
+                    else push_back_type(int64_t)
+                    else push_back_type(uint32_t)
+                    else push_back_type(int32_t)
+                    else push_back_type(uint16_t)
+                    else push_back_type(int16_t)
+                    else push_back_type(uint8_t)
+                    else push_back_type(int8_t)
+                    else push_back_type(float)
+                    else push_back_type(double)
 #undef push_back_type
                 }
             }
@@ -377,7 +373,9 @@ int ln_bridge::service::handle(ln::service_request& req) {
     robotkernel::service_arglist_t service_response;
     _svc.callback(service_request, service_response);
 
+    std::list<uint8_t *> to_free;
     std::list<uint8_t *> to_delete;
+    std::list<uint8_t *> to_delete_vec;
 
     if (message_definition["response"]) {
         const YAML::Node& response = message_definition["response"];
@@ -392,13 +390,13 @@ int ln_bridge::service::handle(ln::service_request& req) {
                 string ln_dt = service_datatype_to_ln(key);
                 //            int ln_dt_size = ln_datatype_size(ln_dt);
 
-                if (ln_dt == "char*") {
+                if (ln_dt.compare("char*") == 0) {
                     const string& tmp_string = service_response[i++];
                     ((uint32_t *)adr)[0] = (uint32_t)tmp_string.size();
                     adr += 4;
                     if (tmp_string.size()) {
                         ((const char **)adr)[0] = (const char *)strdup(tmp_string.c_str());
-                        to_delete.push_back((uint8_t *)(((const char **)adr)[0]));
+                        to_free.push_back((uint8_t *)(((const char **)adr)[0]));
                     } else 
                         ((const char **)adr)[0] = NULL;
                     adr += sizeof(char *);
@@ -408,83 +406,84 @@ int ln_bridge::service::handle(ln::service_request& req) {
                     {
                         //signature "uint32_t 4 1,[uint32_t 4 1,char* 1 1]* 8 1|uint32_t 4 1,[uint32_t 4 1,char* 1 1]* 8 1"
 
-                        string vector = key.substr(0, equals_idx);
-                        string real_key = key.substr(equals_idx + 1);
-                        string ln_dt = service_datatype_to_ln(real_key);
+                        key = key.substr(equals_idx + 1);
+                        ln_dt = service_datatype_to_ln(key);
 
 
 #define add_vector_type(type) \
-                        if (ln_dt == #type) {                                                                       \
-                            const std::vector<type> elem = service_response[i++];                                   \
+                        if (ln_dt.compare(#type) == 0) {                                                            \
+                            const std::vector<type>& elem = service_response[i++];                                  \
                             ((uint32_t *)adr)[0] = (uint32_t)elem.size();                                           \
                             adr += 4;                                                                               \
                             type* entries = new type[elem.size()];                                                  \
-                            to_delete.push_back((uint8_t *)entries);                                                \
+                            to_delete_vec.push_back((uint8_t *)entries);                                            \
                             memcpy(&entries[0], &elem[i], elem.size());                                             \
                             ((type **)adr)[0] = entries;                                                            \
                             adr += sizeof(type *);                                                                  \
                         }
 
 #define add_vector_type_char(type) \
-                        if (ln_dt == #type) {                                                                       \
-                            const std::vector<string> elem = service_response[i++];                                 \
+                        if (ln_dt.compare(#type) == 0) {                                                            \
+                            const std::vector<string>& elem = service_response[i++];                                \
                             ((uint32_t *)adr)[0] = (uint32_t)elem.size();                                           \
                             adr += 4;                                                                               \
                             ln_vector_t* entries = new ln_vector_t[elem.size()];                                    \
-                            to_delete.push_back((uint8_t *)entries);                                                \
+                            to_delete_vec.push_back((uint8_t *)entries);                                            \
                             for (unsigned i = 0; i < elem.size(); ++i) {                                            \
                                 string entry = elem[i];                                                             \
                                 entries[i].len = entry.length();                                                    \
                                 entries[i].val = (const uint8_t *)(strdup(entry.c_str()));                          \
-                                to_delete.push_back((uint8_t *)entries[i].val);                                     \
+                                to_free.push_back((uint8_t *)entries[i].val);                                       \
                             }                                                                                       \
                             ((ln_vector_t **)adr)[0] = entries;                                                     \
                             adr += sizeof(void*);                                                                   \
                         }
 
-                        add_vector_type(uint64_t);
-                        add_vector_type(int64_t);
-                        add_vector_type(uint32_t);
-                        add_vector_type(int32_t);
-                        add_vector_type(uint16_t);
-                        add_vector_type(int16_t);
-                        add_vector_type(uint8_t);
-                        add_vector_type(int8_t);
-                        add_vector_type(float);
-                        add_vector_type(double);
-                        add_vector_type_char(char*);
+                        add_vector_type(uint64_t)
+                        else add_vector_type(int64_t)
+                        else add_vector_type(uint32_t)
+                        else add_vector_type(int32_t)
+                        else add_vector_type(uint16_t)
+                        else add_vector_type(int16_t)
+                        else add_vector_type(uint8_t)
+                        else add_vector_type(int8_t)
+                        else add_vector_type(float)
+                        else add_vector_type(double)
+                        else add_vector_type_char(char*)
                     }
                 } else if (ends_with(ln_dt, string("*"))) {
                     ((uint32_t *)adr)[0] = service_response[i++];
                     adr += 4;
 
 #define push_back_type(type) \
-                    if (ln_dt == #type) {                                               \
+                    if (ln_dt.compare(#type) == 0) {             \
                         ((type*)adr)[0] = service_response[i++]; \
-                        adr += sizeof(type);                                            \
+                        adr += sizeof(type);                     \
                     }
 
-                    push_back_type(uint64_t*);
-                    push_back_type(int64_t*);
-                    push_back_type(uint32_t*);
-                    push_back_type(int32_t*);
-                    push_back_type(uint16_t*);
-                    push_back_type(int16_t*);
-                    push_back_type(uint8_t*);
-                    push_back_type(int8_t*);
-                    push_back_type(float*);
-                    push_back_type(double*);
+                    push_back_type(uint64_t*)
+                    else push_back_type(int64_t*)
+                    else push_back_type(uint32_t*)
+                    else push_back_type(int32_t*)
+                    else push_back_type(uint16_t*)
+                    else push_back_type(int16_t*)
+                    else push_back_type(uint8_t*)
+                    else push_back_type(int8_t*)
+                    else push_back_type(float*)
+                    else push_back_type(double*)
                 } else {
-                    push_back_type(uint64_t);
-                    push_back_type(int64_t);
-                    push_back_type(uint32_t);
-                    push_back_type(int32_t);
-                    push_back_type(uint16_t);
-                    push_back_type(int16_t);
-                    push_back_type(uint8_t);
-                    push_back_type(int8_t);
-                    push_back_type(float);
-                    push_back_type(double);
+                    push_back_type(uint64_t)
+                    else push_back_type(int64_t)
+                    else push_back_type(uint32_t)
+                    else push_back_type(int32_t)
+                    else push_back_type(uint16_t)
+                    else push_back_type(int16_t)
+                    else push_back_type(uint8_t)
+                    else push_back_type(int8_t)
+                    else push_back_type(float)
+                    else push_back_type(double)
+
+#undef push_back_type
                 }
             }
         }
@@ -494,7 +493,15 @@ int ln_bridge::service::handle(ln::service_request& req) {
 
     for (std::list<uint8_t *>::iterator it = to_delete.begin();
             it != to_delete.end(); ++it) {
+        delete (*it);
+    }
+    for (std::list<uint8_t *>::iterator it = to_delete_vec.begin();
+            it != to_delete_vec.end(); ++it) {
         delete[] (*it);
+    }
+    for (std::list<uint8_t *>::iterator it = to_free.begin();
+            it != to_free.end(); ++it) {
+        free((*it));
     }
 
     return 0;
