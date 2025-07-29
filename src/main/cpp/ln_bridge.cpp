@@ -161,7 +161,7 @@ void ln_bridge::client::remove_service(
  */
 ln_bridge::service::service(ln_bridge::client& clnt, 
         const robotkernel::service_t& svc) : _clnt(clnt), _svc(svc), _ln_service(NULL), name("") {
-    _create_ln_message_defition(); 
+    _create_ln_message_definition(); 
 
     register_service();
 }
@@ -515,7 +515,7 @@ int ln_bridge::service::handle(ln::service_request& req) {
     return 0;
 }
 
-void ln_bridge::service::_create_ln_message_defition() {
+void ln_bridge::service::_create_ln_message_definition() {
     std::stringstream ss_md, ss_signature;
     YAML::Node message_definition = YAML::Load(_svc.service_definition);
     ss_md << "service" << endl;
