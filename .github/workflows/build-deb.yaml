@@ -68,6 +68,7 @@ jobs:
 
           case "${{ matrix.distro }}" in
             debian-11)
+            ubuntu-22.04)
               apt-get install -y libprocps-dev
               ;;
             *)
