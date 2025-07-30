@@ -54,6 +54,7 @@ jobs:
       - name: Install build dependencies
         shell: bash
         run: |
+          ln -sf /bin/bash /bin/sh
           apt-get update
     
           export DEBIAN_FRONTEND=noninteractive
