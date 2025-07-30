@@ -57,6 +57,7 @@ jobs:
           export DEBIAN_FRONTEND=noninteractive
           apt-get update
           apt-get install -y libgdk-pixbuf-2.0-0
+          ln -sf /bin/dash /bin/sh
 
       - name: Install build dependencies
         run: |
