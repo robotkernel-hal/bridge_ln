@@ -51,7 +51,7 @@ jobs:
       image: ${{ matrix.image }}
 
     steps:
-      - name: Workaround: run apt install with sh -> bash for buggy scripts
+      - name: Workaround - run apt install with sh -> bash for buggy scripts
         run: |
           sudo ln -sf /bin/bash /bin/sh 
           export DEBIAN_FRONTEND=noninteractive
