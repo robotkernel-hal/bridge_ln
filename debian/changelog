@@ -1,0 +1,208 @@
+bridge-ln (6.0.0~pre1) unstable; urgency=low
+
+  * prep: 6.0.0
+
+ -- Robert Burger <robert.burger@dlr.de>  Thu, 10 Apr 2025 13:35:37 +0200
+
+bridge-ln (5.0.15) unstable; urgency=low
+
+  * fix: handling of vector/string in request
+  * Merge pull request #4 from robotkernel/schm-fl-patch-1
+  * call `handle_service_group_in_thread_pool()` only once after creating new client
+
+ -- Robert Burger <robert.burger@dlr.de>  Thu, 10 Apr 2025 13:35:37 +0200
+
+bridge-ln (5.0.14) unstable; urgency=low
+
+  * Merge pull request #2 from robotkernel/feat/conan2_build
+  * chore: black format
+  * fix: conan2 compatible version ranges
+
+ -- Mühlbauer, Maximilian Sebastian <Maximilian.Muehlbauer@dlr.de>  Fri, 1 Mar 2024 12:00:03 +0100
+
+bridge-ln (5.0.13) unstable; urgency=low
+
+  * updated to conan2 syntax
+  * remove post install hook
+
+ -- Robert Burger <robert.burger@dlr.de>  Wed, 22 Nov 2023 06:26:58 +0100
+
+bridge-ln (5.0.12) unstable; urgency=low
+
+  * trying to use message def without prefix 'robotkernel' first
+
+ -- Robert Burger <robert.burger@dlr.de>  Wed, 2 Aug 2023 08:29:30 +0200
+
+bridge-ln (5.0.11) unstable; urgency=low
+
+  * switched to conan_template
+
+ -- Robert Burger <robert.burger@dlr.de>  Thu, 26 Jan 2023 17:06:04 +0100
+
+bridge-ln (5.0.10) unstable; urgency=low
+
+  * CHANGE: using ln_helper and removed that stuff vom ln_bridge
+
+ -- Robert Burger <robert.burger@dlr.de>  Thu, 2 Dec 2021 16:59:28 +0100
+
+bridge-ln (5.0.9) unstable; urgency=low
+
+  * ADD: readme extended with upload_message_definitions
+  * ADD: option to specify upload_message_definitions: never, on_demand, always
+  * CHANGE: using new python_require
+
+ -- Robert Burger <robert.burger@dlr.de>  Thu, 2 Dec 2021 08:43:53 +0100
+
+bridge-ln (5.0.8) unstable; urgency=low
+
+  * FIX: removed unused build req
+
+ -- Robert Burger <robert.burger@dlr.de>  Wed, 1 Dec 2021 17:21:11 +0100
+
+bridge-ln (5.0.7) unstable; urgency=low
+
+  * CHANGE: robotkernel main service now moved to top level
+
+ -- Robert Burger <robert.burger@dlr.de>  Wed, 1 Dec 2021 16:40:22 +0100
+
+bridge-ln (5.0.6) unstable; urgency=low
+
+  * CHANGE: using bridge name for client instead of robotkernel name
+
+ -- Robert Burger <robert.burger@dlr.de>  Wed, 1 Dec 2021 16:20:59 +0100
+
+bridge-ln (5.0.5) unstable; urgency=low
+
+  * CHANGE: build with links_and_nodes 2
+
+ -- Robert Burger <robert.burger@dlr.de>  Wed, 1 Dec 2021 11:24:50 +0100
+
+bridge-ln (5.0.4) unstable; urgency=low
+
+  * DEL: md_creator.h
+  * FIX: no need to link bridge-ln to generator
+  * FIX: compiliation with robotkernel-5
+  * FIX: conan versions
+  * ADD: ln_bridge_generator
+  * ADD: static create ln message def function
+  * FIX: using ln-builtin mds
+  * FIX: only upload a message definition if ln_manager has none for us
+  * FIX: conan template version
+
+ -- Robert Burger <robert.burger@dlr.de>  Tue, 30 Nov 2021 10:49:25 +0100
+
+bridge-ln (5.0.3) unstable; urgency=low
+
+  * Merge branch 'release/5.0.3'
+  * switched liblinks_and_nodes to stable
+  * switched to links_and_nodes stable
+  * Merge branch 'master' into release/5.0.3
+  * added vector/string on requests
+  * switching to defaults
+  * using conan template
+  * trying to strip
+  * clean up
+  * removed debug builds due to liblinks_and_nodes scons debug issue
+  * compiling against liblinks_and_nodes in artifactory
+  * switched to stable robotkernel
+  * updated build targets
+  * Merge branch 'release/5.0.3'
+  * added architectures
+  * added architectures
+  * fixed jenkinsfile
+  * fixed jenkinsfile
+  * added architectures
+  * added architectures
+  * added missing algorithm include
+  * build: updated build/ci files for cissy 1.0->2.0
+  * build: updated build/ci files for cissy 1.0->2.0
+  * build: updated build/ci files for cissy 1.0->2.0
+  * Merge branch 'release/5.0.3' of rmc-github.robotic.dlr.de:robotkernel/bridge-ln into release/5.0.3
+  * replacing dots with underscores
+  * changed svc name
+  * changed md names
+  * changed dots to slashed
+  * better md name generation
+  * Merge branch 'release/5.0.3' of rmc-github.robotic.dlr.de:robotkernel/bridge-ln into release/5.0.3
+  * try to make it easier
+  * fixed optimization of newer gcc
+  * fixed optimization of newer gcc
+  * fixed ldflags
+  * removed ln and printing error message of exception creating ln client
+  * updated reqs
+  * updated jenkins file
+  * updated requires
+  * Merge branch 'master' of rmc-github.robotic.dlr.de:robotkernel/bridge-ln
+  * added missing m4 macro
+  * Merge branch 'master' of rmc-github.robotic.dlr.de:robotkernel/bridge-ln
+  * added missing file
+  * cloning links_and_nodes from conanfile.py
+  * added submodule update
+  * build with local links_and_nodes
+  * added ln submodule
+  * changes to thread pool
+  * added conan/jenkins stuff
+  * added timeout to enable clean shutdown
+
+ -- Robert Burger <robert.burger@dlr.de>  Tue, 26 Jan 2021 13:00:55 +0100
+
+bridge-ln (5.0.1) unstable; urgency=low
+
+  * prep 5.0.1
+  * do not call put_message_definition if it was already put before
+
+ -- Robert Burger <robert.burger@dlr.de>  Mon, 9 Apr 2018 14:51:56 +0200
+
+bridge-ln (5.0.0) unstable; urgency=low
+
+  * prep 5.0.0 release
+  * changed thread handling
+  * added cat
+  * readme work
+  * moved doc to mediawiki
+  * added SUPPORTED_LANGUAGES
+  * added ignore of generated inc.lnc
+  * latest changes, version fix
+  * inc version
+  * fixed for service definiton changes
+  * fixed library path in lnc include file
+  * fixed dependencies, install of lnc include file
+  * fixed project deps
+  * fixed deps
+  * readded deps
+  * inc version
+  * cleaned up/stopping running thread
+  * fixed project properties
+  * added info to project properties
+  * added double and float types in service calls
+  * added float and double data type sizes
+  * removed group name
+  * better run loop thread
+  * added links-and-nodes an rmpm stuff
+  * added group name
+  * thread name changes
+  * fixed runnable construction
+  * removed adding dummy robotkernel device
+  * better service storage in bridge ln
+  * changes for latest robotkernel::bridge changes
+  * fixed vector datatypes to make flo happy
+  * Merge branch 'master' of rmc-github.robotic.dlr.de:robotkernel/bridge-ln
+  * fixed destruction
+  * dependency fix
+  * added new dependency resolution
+  * autotools build
+  * removed scripts
+  * fixed datatypes of vectors
+  * removed bridge_interface.h, not needed
+  * fixed indent
+  * connecting in background if ln_manager not present at startup
+  * fixed service definition generation
+  * fixed latest robotkernel-5 changes
+  * added empty README
+  * added ptfile added doc and share directories
+  * cleaned up bridge, catching exception in client creation
+  * fixed bridge-ln build
+  * initial commit
+
+ -- Robert Burger <robert.burger@dlr.de>  Mon, 12 Mar 2018 07:22:18 +0100
+
