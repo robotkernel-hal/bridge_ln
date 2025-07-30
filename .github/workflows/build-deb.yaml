@@ -1,0 +1,200 @@
+name: Build and Publish Debian Package
+
+on:
+  push:
+
+jobs:
+  create_release:
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    outputs:
+      upload_url: ${{ steps.create_release.outputs.upload_url }}
+    steps:
+      - uses: actions/checkout@v3
+
+      - id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref_name }}
+          release_name: Release ${{ github.ref_name }}
+          body: Automated release for tag ${{ github.ref_name }}
+          draft: false
+          prerelease: false
+
+  build-deb:
+    runs-on: ubuntu-latest
+    env:
+      DEB_BUILD_OPTIONS: nocheck
+    strategy:
+      matrix:
+        distro: [debian-12, debian-11, ubuntu-24.04, ubuntu-22.04]
+        include:
+          - distro: debian-12
+            image: debian:12
+            os: debian
+            version: bookworm
+          - distro: debian-11
+            image: debian:11
+            os: debian
+            version: bullseye
+          - distro: ubuntu-24.04
+            image: ubuntu:24.04
+            os: ubuntu
+            version: noble
+          - distro: ubuntu-22.04
+            image: ubuntu:22.04
+            os: ubuntu
+            version: jammy
+    container:
+      image: ${{ matrix.image }}
+
+    steps:
+      - name: Install build dependencies
+        run: |
+          apt-get update
+          apt-get install -y build-essential devscripts debhelper autotools-dev autoconf-archive \
+            pkg-config fakeroot sed git tar gzip python3-pip python3-venv curl jq libyaml-cpp-dev \
+            g++ scons automake make libtool libdpkg-perl libpython3-dev python3-sphinx python3-dev \
+            libproc2-dev libboost-python-dev python3-yaml python3-numpy python3-gi python3-gi-cairo \
+            gir1.2-gtk-3.0 gir1.2-vte-2.91 gir1.2-gtksource-4 openssh-client iproute2 libtomcrypt-dev
+                  
+          curl -1sLf 'https://dl.cloudsmith.io/basic/robertburger/robotkernel/setup.deb.sh' | sudo bash
+          apt-get update
+          apt-get install -y robotkernel-service-helper robotkernel-dev
+
+      - name: Build and install libstring_util
+        run: |
+          git clone -b 1.2.9 --recursive https://gitlab.com/links_and_nodes/libstring_util
+          cd libstring_util
+          test -f configure || autoreconf -if
+          mkdir -p build
+          cd build
+          test -f Makefile || ../configure "--prefix=/usr" --disable-shared --with-pic
+          make -j4 install
+          
+      - name: Checkout source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Mark working directory as safe
+        run: git config --global --add safe.directory $GITHUB_WORKSPACE
+
+      - name: update branch name and version
+        run: |
+          safe_branch=$(echo "${GITHUB_REF_NAME}" | tr '/' '-')
+          VERSION=$(dpkg-parsechangelog | sed -n 's/^Version: //p')
+          sed "s|PACKAGE_VERSION|$VERSION|" configure.ac.in > configure.ac
+        env:
+          GITHUB_REF_NAME: ${{ github.ref_name }}
+
+      - name: Build .deb package
+        shell: bash
+        run: |
+          if [ ! -f configure.ac ]; then
+            VERSION=$(echo "${{ github.ref_name }}" | tr '/:' '--')
+            sed "s|PACKAGE_VERSION|$VERSION|" configure.ac.in > configure.ac
+          fi
+
+          test -f configure || autoreconf -if
+
+          git clone https://github.com/robotkernel-hal/ln_helper.git
+          git clone -b 2.4.4 --recurse-submodules https://gitlab.com/links_and_nodes/links_and_nodes
+
+          cd links_and_nodes/libln
+          ../python/links_and_nodes_base/ln_generate -o include/ln/client_lib_messages.h --md-dir ../share/message_definitions ln2/request_topic ln/parameters/query ln/parameters/query_dict ln/parameters/override_dict_single ln/parameters/request_parameter_topic ln/event/call ln/event/connect ln/log_service
+          python3 ./scripts/generate_ln_errors_h include/ln/ln.h include/ln/errors.h
+          for f in src/*.c; do echo compiling $f; gcc $f -fPIC -Iinclude -Isrc -c -D__LINUX__ -DLTM_DESC -DUSE_LTM ; done
+          echo compiling src/sharedlnclient.cpp; g++ -fPIC src/sharedlnclient.cpp  -Iinclude -Isrc -c -D__LINUX__ -DLTM_DESC -DUSE_LTM
+          echo creating libln.a; ar cr libln.a *.o
+          cd ../..
+
+          export CXXFLAGS="$(pkg-config --cflags libstring_util)" 
+          export LDFLAGS="$(pkg-config --libs libstring_util)"
+          export LINKS_AND_NODES_CFLAGS="-I$(pwd)/links_and_nodes/libln/include" 
+          export LINKS_AND_NODES_LIBS="$(pwd)/links_and_nodes/libln/libln.a"
+          export LN_HELPER_CFLAGS="-I$(pwd)/ln_helper/src/main/cpp"
+          export LN_HELPER_LIBS=" "
+
+          # baue mit dpkg-buildpackage (ohne signieren)
+          CODENAME=$(lsb_release -sc)
+          DEBEMAIL="robert.burger@dlr.de"
+          DEBFULLNAME="Robert Burger"
+
+          if ! dpkg-parsechangelog | grep -q "~${CODENAME}"; then
+            dch --local ~${CODENAME} "Build for ${CODENAME}";
+          fi
+
+          dpkg-buildpackage -us -uc -S
+          dpkg-buildpackage -us -uc -d
+
+      - name: Collect .deb artifact
+        run: |
+          mkdir -p artifacts/${{ matrix.os }}/${{ matrix.version }}
+          mv ../bridge-ln*.deb artifacts/${{ matrix.os }}/${{ matrix.version }}
+      
+      - name: Set sanitized image name
+        id: sanitize
+        run: |
+          version=$(dpkg-parsechangelog | sed -n 's/^Version: //p')
+          echo "sanitized_image=$(echo "${version}_amd64" | tr '/:' '--')" >> $GITHUB_OUTPUT
+
+      - name: Upload .deb package artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: bridge-ln-${{ steps.sanitize.outputs.sanitized_image }}
+          path: artifacts/${{ matrix.os }}/${{ matrix.version }}/
+
+      - name: Debug artifact files
+        run: |
+          ls -l ./artifacts/${{ matrix.os }}/${{ matrix.version }}/
+
+      # Fetch the release upload URL dynamically on tag builds
+      - name: Get Release Upload URL
+        if: startsWith(github.ref, 'refs/tags/')
+        id: get_release
+        run: |
+          release_json=$(curl -sSL \
+            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Accept: application/vnd.github.v3+json" \
+            "https://api.github.com/repos/${{ github.repository }}/releases/tags/${GITHUB_REF_NAME}")
+          upload_url=$(echo "$release_json" | jq -r '.upload_url' | sed -e "s/{?name,label}//")
+          echo "upload_url=$upload_url" >> $GITHUB_OUTPUT
+        env:
+          GITHUB_REF_NAME: ${{ github.ref_name }}
+
+      - name: Upload asset manually with curl
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          UPLOAD_URL: ${{ steps.get_release.outputs.upload_url }}
+          FILE_PATH: ./artifacts/${{ matrix.os }}/${{ matrix.version }}/bridge-ln_${{ steps.sanitize.outputs.sanitized_image }}.deb
+          FILE_NAME: bridge-ln_${{ steps.sanitize.outputs.sanitized_image }}.deb
+        run: |
+          echo "Uploading $FILE_PATH to $UPLOAD_URL?name=$FILE_NAME"
+          curl --fail -X POST \
+            -H "Authorization: token $GITHUB_TOKEN" \
+            -H "Content-Type: application/vnd.debian.binary-package" \
+            --data-binary @"$FILE_PATH" \
+            "$UPLOAD_URL?name=$FILE_NAME"
+
+      - name: Upload to Cloudsmith (${{ matrix.os }}/${{ matrix.version }})
+        #if: startsWith(github.ref, 'refs/tags/')
+        env:
+          CLOUDSMITH_API_KEY: ${{ secrets.CLOUDSMITH_API_KEY }}
+        shell: bash
+        run: |
+          FILENAME="artifacts/${{ matrix.os }}/${{ matrix.version }}/bridge-ln_${{ steps.sanitize.outputs.sanitized_image }}.deb"
+        
+          python3 -m venv cloudsmith
+          cd cloudsmith
+          source bin/activate
+
+          python3 -m pip install --upgrade pip
+          pip3 install cloudsmith-cli
+
+          cloudsmith push deb robertburger/robotkernel/${{ matrix.os }}/${{ matrix.version }} ../${FILENAME} \
+            --republish \
+            --api-key "$CLOUDSMITH_API_KEY"
