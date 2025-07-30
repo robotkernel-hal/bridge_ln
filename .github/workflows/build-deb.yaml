@@ -69,7 +69,7 @@ jobs:
               ;;
           esac
                   
-          curl -1sLf 'https://dl.cloudsmith.io/basic/robertburger/robotkernel/setup.deb.sh' | sudo bash
+          curl -1sLf 'https://dl.cloudsmith.io/basic/robertburger/robotkernel/setup.deb.sh' | bash
           apt-get update
           apt-get install -y robotkernel-service-helper robotkernel-dev
 
