@@ -53,7 +53,7 @@ jobs:
     steps:
       - name: Workaround - run apt install with sh -> bash for buggy scripts
         run: |
-          sudo ln -sf /bin/bash /bin/sh 
+          ln -sf /bin/bash /bin/sh 
           export DEBIAN_FRONTEND=noninteractive
           apt-get update
           apt-get install -y libgdk-pixbuf-2.0-0
