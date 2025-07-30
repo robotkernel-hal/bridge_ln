@@ -59,9 +59,7 @@ jobs:
           apt-get install -y libgdk-pixbuf-2.0-0
 
       - name: Install build dependencies
-        shell: bash
         run: |
-          ln -sf /bin/bash /bin/sh
           apt-get update
     
           export DEBIAN_FRONTEND=noninteractive
