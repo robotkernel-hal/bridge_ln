@@ -52,6 +52,7 @@ jobs:
 
     steps:
       - name: Install build dependencies
+        shell: bash
         run: |
           apt-get update
     
