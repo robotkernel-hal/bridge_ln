@@ -103,7 +103,7 @@ class service {
         //! register service to ln
         void register_service();
 
-        void _create_ln_message_defition();
+        void _create_ln_message_definition();
 
         ln_bridge::client& _clnt;
         const robotkernel::service_t& _svc;
