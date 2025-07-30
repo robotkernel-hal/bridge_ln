@@ -1,0 +1,16 @@
+Source: bridge-ln
+Priority: optional
+Maintainer: Robert Burger <robert.burger@dlr.de>
+Build-Depends: debhelper-compat (= 13), autotools-dev
+Standards-Version: 4.5.1
+Section: libs
+Homepage: https://www.burger-system.de/robotkernel/bridge_ln
+Vcs-Browser: https://github.com/robotkernel-hal/bridge_ln.git
+Vcs-Git: https://github.com/robotkernel-hal/bridge_ln.git
+Rules-Requires-Root: no
+
+Package: bridge-ln
+Architecture: any
+Multi-Arch: same
+Depends: robotkernel, libosal, libethercat, ${misc:Depends}
+Description: Robotkernel bridge command line interface
