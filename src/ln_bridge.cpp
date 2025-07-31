@@ -418,7 +418,7 @@ int ln_bridge::service::handle(ln::service_request& req) {
                             adr += 4;                                                                               \
                             type* entries = new type[elem.size()];                                                  \
                             to_delete_vec.push_back((uint8_t *)entries);                                            \
-                            memcpy(&entries[0], &elem[i], elem.size());                                             \
+                            memcpy(&entries[0], &elem[i], sizeo(type) * elem.size());                               \
                             ((type **)adr)[0] = entries;                                                            \
                             adr += sizeof(type *);                                                                  \
                         }
