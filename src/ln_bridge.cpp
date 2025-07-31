@@ -193,6 +193,9 @@ void ln_bridge::service::register_service() {
 
     // create service name
     string svc_name = _clnt.clnt->name + "." + _svc.owner + "." + _svc.name;
+    if (_svc.owner.compare(robotkernel::name()) == 0) {
+        svc_name = _clnt.clnt->name + "." + _svc.name;
+    }
 
     // put ln message definition. this will create 
     // ~/ln_message_definitions/gen/<svc_name>
