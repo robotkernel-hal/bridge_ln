@@ -14,3 +14,4 @@ Architecture: any
 Multi-Arch: same
 Depends: robotkernel, libosal, libethercat, ${misc:Depends}
 Description: Robotkernel bridge command line interface
+  bridge-cli exports all robotkernel services via a links-and-nodes services
