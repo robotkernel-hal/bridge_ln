@@ -12,7 +12,7 @@ class MainProject(ConanFile):
     tool_requires = "links_and_nodes_base_python/[>=1.2.3 <3]@common/stable"
 
     def requirements(self):
-        self.requires("robotkernel/6.0.0-vec-rework@robotkernel/snapshot")
+        self.requires("robotkernel/[~6]@robotkernel/unstable")
         self.requires("libstring_util/[~1]@common/stable")
         self.requires("liblinks_and_nodes/[>=1.2.3 <3]@common/stable")
         self.requires("ln_helper/[~0]@robotkernel/stable")
