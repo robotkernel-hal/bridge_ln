@@ -34,6 +34,7 @@
 
 using namespace std;
 using namespace robotkernel;
+using namespace robotkernel::helpers;
 using namespace ln_md_helper;
 
 BRIDGE_DEF(bridge_ln, ln_bridge::client);
