@@ -58,7 +58,7 @@ jobs:
           apt-get update
           apt-get install -y build-essential devscripts debhelper autotools-dev autoconf-archive \
             pkg-config fakeroot sed git tar gzip python3-pip python3-venv curl jq libyaml-cpp-dev \
-            g++ automake make libtool libtomcrypt-dev python3-numpy
+            g++ automake make libtool libtomcrypt-dev python3-numpy rsync
 
           case "${{ matrix.distro }}" in
             debian-11|ubuntu-22.04)
