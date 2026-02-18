@@ -22,20 +22,24 @@
  */
 
 #include "ln_bridge.h"
-#include "ln_md_helper.h"
 #include "robotkernel/helpers.h"
 #include "robotkernel/service.h"
-#include "robotkernel/rk_type.h"
 #include "robotkernel/robotkernel.h"
 
 #include <functional>
 #include <algorithm>
 #include <stdexcept>
+#include <type_traits>
+
+#include "ln_helper/field.h"
+#include "ln_helper/datatype.h"
+#include "ln_helper/service.h"
+#include "ln_helper/helper.h"
 
 using namespace std;
 using namespace robotkernel;
 using namespace robotkernel::helpers;
-using namespace ln_md_helper;
+//using namespace ln_md_helper;
 
 BRIDGE_DEF(bridge_ln, ln_bridge::client);
 
@@ -264,118 +268,150 @@ typedef struct __attribute__((__packed__)) ln_vector {
     const uint8_t *val;
 } __attribute__((__packed__)) ln_vector_t;
 
+template <typename T>
+void assign_to_adr(uint8_t *& adr, const T& value) {
+    *reinterpret_cast<T*>(adr) = value;
+    adr = static_cast<uint8_t*>(adr) + sizeof(T);
+}
+
 int ln_bridge::service::handle(ln::service_request& req) {
     uint8_t svc[1024];
     req.set_data(&svc[0], signature.c_str());
-    uint64_t adr = (uint64_t)&svc[0];
+    uint8_t *adr = (uint8_t *)&svc[0];
 
     // request arguments
-    robotkernel::service_arglist_t service_request;
+    YAML::Node service_request, service_response;
 
     YAML::Node message_definition = YAML::Load(_svc.service_definition);
+    _clnt.log(info, "got message definition:\n%s\n", _svc.service_definition.c_str());
+
     if (message_definition["request"]) {
         const YAML::Node& request = message_definition["request"];
 
-        for (YAML::const_iterator it = request.begin(); 
-                it != request.end(); ++it) {
-            for (const auto& kv : *it) {
-                string key   = kv.first.as<string>();
-                string value = kv.second.as<string>();
+        std::function<void(const std::string&, const std::string&, const bool&)> process_request_entry = 
+            [&](const std::string& name, const std::string& dtype, const bool& is_array) -> void 
+        {
+            string ln_dt = dtype; //ln_md_helper::service_datatype_to_ln(dtype);
 
-                string ln_dt = service_datatype_to_ln(key);
+            if (ln_dt == "string") { //"char*") {
+                uint32_t tmp_len = ((uint32_t *)adr)[0];
+                adr += 4;
+                char *tmp_adr = reinterpret_cast<char **>(adr)[0];
+                adr += sizeof(char*);
 
-                if (ln_dt == "char*") {
-                    uint32_t tmp_len = ((uint32_t *)adr)[0];
+                service_request[name] = string(tmp_adr, tmp_len);
+            } else if (/*ln_md_helper::starts_with(dtype, "vector/") ||*/ is_array) {
+                std::string real_dtype = dtype;
+                
+                const size_t equals_idx = dtype.find_first_of('/');
+                if (std::string::npos != equals_idx)
+                {
+                    real_dtype = dtype.substr(equals_idx + 1);
+                }
+
+                //signature "uint32_t 4 1,[uint32_t 4 1,char* 1 1]* 8 1|uint32_t 4 1,[uint32_t 4 1,char* 1 1]* 8 1"
+
+                ln_dt = real_dtype; //ln_md_helper::service_datatype_to_ln(real_dtype);
+
+                auto add_vector_typed = [&](auto type_tag) -> void {
+                    using T = decltype(type_tag);
+
+                    uint32_t len = *reinterpret_cast<uint32_t*>(adr);
+                    adr = static_cast<uint8_t*>(adr) + sizeof(uint32_t);
+
+                    std::vector<T> entries(len);
+                    T *tmp_adr = *reinterpret_cast<T**>(adr);
+                    adr = static_cast<uint8_t*>(adr) + sizeof(T*);
+
+                    std::memcpy(entries.data(), tmp_adr, sizeof(T) * len);
+
+                    service_request[name] = std::move(entries);
+                };
+
+                if      (ln_dt == "uint64_t") add_vector_typed(uint64_t{});
+                else if (ln_dt == "int64_t")  add_vector_typed(int64_t{});
+                else if (ln_dt == "uint32_t") add_vector_typed(uint32_t{});
+                else if (ln_dt == "int32_t")  add_vector_typed(int32_t{});
+                else if (ln_dt == "uint16_t") add_vector_typed(uint16_t{});
+                else if (ln_dt == "int16_t")  add_vector_typed(int16_t{});
+                else if (ln_dt == "uint8_t")  add_vector_typed(uint8_t{});
+                else if (ln_dt == "int8_t")   add_vector_typed(int8_t{});
+                else if (ln_dt == "float")    add_vector_typed(float{});
+                else if (ln_dt == "double")   add_vector_typed(double{});
+                else if (ln_dt == "string") { //"char*") {
+                    uint32_t len = *reinterpret_cast<uint32_t*>(adr);
+                    adr = static_cast<uint8_t*>(adr) + sizeof(uint32_t);
+
+                    std::vector<std::string> entries(len);
+                    ln_vector_t *lnentries = *reinterpret_cast<ln_vector_t**>(adr);
+                    adr = static_cast<uint8_t*>(adr) + sizeof(ln_vector_t*);
+
+                    for (unsigned i = 0; i < len; ++i) {
+                        entries[i] = std::string(reinterpret_cast<const char*>(lnentries[i].val), lnentries[i].len);
+                    }
+
+                    service_request[name] = std::move(entries);
+                }
+            } else {
+                if (false) { // TODO ln_md_helper::ends_with(ln_dt, string("*"))) {
+                    auto push_typed = [&](auto type_tag) -> void {
+                        using T = decltype(type_tag);
+                        service_request[name] = reinterpret_cast<uintptr_t>((*reinterpret_cast<T*>(adr)));
+                        adr = static_cast<uint8_t*>(adr) + sizeof(T);
+                    };
+
+                    service_request[name] = reinterpret_cast<uint32_t *>(adr)[0];    //<! array length
                     adr += 4;
-                    char *tmp_adr = ((char **)adr)[0];
-                    adr += sizeof(char*);
 
-                    service_request.push_back(string(tmp_adr, tmp_len));
-                } else if (starts_with(key, "vector")) {
-                    const size_t equals_idx = key.find_first_of('/');
-                    if (std::string::npos != equals_idx)
-                    {
-                        //signature "uint32_t 4 1,[uint32_t 4 1,char* 1 1]* 8 1|uint32_t 4 1,[uint32_t 4 1,char* 1 1]* 8 1"
-
-                        key = key.substr(equals_idx + 1);
-                        ln_dt = service_datatype_to_ln(key);
-
-#define add_vector_type(type) \
-                        if (ln_dt.compare(#type) == 0) {                                                            \
-                            uint32_t len = ((uint32_t *)adr)[0];                                                    \
-                            adr += 4;                                                                               \
-                            std::vector<type> entries(len);                                                         \
-                            type *tmp_adr = ((type **)adr)[0];                                                      \
-                            memcpy(&entries[0], tmp_adr, sizeof(type) * len);                                       \
-                            adr += sizeof(type *);                                                                  \
-                            service_request.push_back(entries);                                                     \
-                        }
-                        add_vector_type(uint64_t)
-                        else add_vector_type(int64_t)
-                        else add_vector_type(uint32_t)
-                        else add_vector_type(int32_t)
-                        else add_vector_type(uint16_t)
-                        else add_vector_type(int16_t)
-                        else add_vector_type(uint8_t)
-                        else add_vector_type(int8_t)
-                        else add_vector_type(float)
-                        else add_vector_type(double)
-#undef add_vector_type
-
-#define add_vector_type_char(type) \
-                        if (ln_dt.compare(#type) == 0) {                                                            \
-                            uint32_t len = ((uint32_t *)adr)[0];                                                    \
-                            adr += 4;                                                                               \
-                            std::vector<string> entries(len);                                                       \
-                            ln_vector_t* lnentries = *(ln_vector_t **)adr;                                          \
-                            adr += sizeof(ln_vector_t *);                                                           \
-                            for (unsigned i = 0; i < len; ++i) {                                                    \
-                                entries[i] = string((char *)(lnentries[i].val), (lnentries[i].len));                \
-                            }                                                                                       \
-                            service_request.push_back(entries);                                                     \
-                        }
-                        add_vector_type_char(char*);
-#undef add_vector_type_char
-                    }
-
-                } else if (ends_with(ln_dt, string("*"))) {               
-                    service_request.push_back(((uint32_t *)adr)[0]);    //<! array length
-                    adr += 4;                
-#define push_back_type(type) \
-                    if (ln_dt.compare(#type) == 0) {                    \
-                        service_request.push_back(((type*)adr)[0]);     \
-                        adr += sizeof(type);                            \
-                    }
-
-                    push_back_type(uint64_t*)
-                    else push_back_type(int64_t*)
-                    else push_back_type(uint32_t*)
-                    else push_back_type(int32_t*)
-                    else push_back_type(uint16_t*)
-                    else push_back_type(int16_t*)
-                    else push_back_type(uint8_t*)
-                    else push_back_type(int8_t*)
-                    else push_back_type(float*)
-                    else push_back_type(double*)
+                    if      (ln_dt == "uint64_t*") push_typed((uint64_t*){});
+                    else if (ln_dt == "int64_t*")  push_typed((int64_t*){});
+                    else if (ln_dt == "uint32_t*") push_typed((uint32_t*){});
+                    else if (ln_dt == "int32_t*")  push_typed((int32_t*){});
+                    else if (ln_dt == "uint16_t*") push_typed((uint16_t*){});
+                    else if (ln_dt == "int16_t*")  push_typed((int16_t*){});
+                    else if (ln_dt == "uint8_t*")  push_typed((uint8_t*){});
+                    else if (ln_dt == "int8_t*")   push_typed((int8_t*){});
+                    else if (ln_dt == "float*")    push_typed((float*){});
+                    else if (ln_dt == "double*")   push_typed((double*){});
                 } else {
-                    push_back_type(uint64_t)
-                    else push_back_type(int64_t)
-                    else push_back_type(uint32_t)
-                    else push_back_type(int32_t)
-                    else push_back_type(uint16_t)
-                    else push_back_type(int16_t)
-                    else push_back_type(uint8_t)
-                    else push_back_type(int8_t)
-                    else push_back_type(float)
-                    else push_back_type(double)
-#undef push_back_type
+                    auto push_typed = [&](auto type_tag) -> void {
+                        using T = decltype(type_tag);
+                        service_request[name] = (*reinterpret_cast<T*>(adr));
+                        adr = static_cast<uint8_t*>(adr) + sizeof(T);
+                    };
+
+                    if      (ln_dt == "uint64_t")  push_typed(uint64_t{});
+                    else if (ln_dt == "int64_t")   push_typed(int64_t{});
+                    else if (ln_dt == "uint32_t")  push_typed(uint32_t{});
+                    else if (ln_dt == "int32_t")   push_typed(int32_t{});
+                    else if (ln_dt == "uint16_t")  push_typed(uint16_t{});
+                    else if (ln_dt == "int16_t")   push_typed(int16_t{});
+                    else if (ln_dt == "uint8_t")   push_typed(uint8_t{});
+                    else if (ln_dt == "int8_t")    push_typed(int8_t{});
+                    else if (ln_dt == "float")     push_typed(float{});
+                    else if (ln_dt == "double")    push_typed(double{});
+                }
+            }
+        };
+
+        for (YAML::const_iterator it = request.begin(); it != request.end(); ++it) {
+            if (it->IsMap() && (*it)["name"]) { // complex format
+                string name = get_as<string>(*it, "name");
+                string dtype = get_as<string>(*it, "type");
+                bool is_array = get_as<bool>(*it, "array", false);
+
+                process_request_entry(name, dtype, is_array);
+            } else { // simple format
+                for (const auto& kv : *it) {
+                    string key   = kv.first.as<string>();
+                    string value = kv.second.as<string>();
+                    process_request_entry(value, key, false);
                 }
             }
         }
     }
 
     // call robotkernel service
-    robotkernel::service_arglist_t service_response;
     _svc.callback(service_request, service_response);
 
     std::list<uint8_t *> to_free;
@@ -384,113 +420,122 @@ int ln_bridge::service::handle(ln::service_request& req) {
 
     if (message_definition["response"]) {
         const YAML::Node& response = message_definition["response"];
-        int i = 0;
 
-        for (YAML::const_iterator it = response.begin(); 
-                it != response.end(); ++it) {
-            for (const auto& kv : *it) {
-                string key   = kv.first.as<string>();
-                string value = kv.second.as<string>();
+        std::function<void(const YAML::Node&, const std::string&, const bool&, uint8_t*&)> process_response_entry = 
+            [&service_response, &to_free, &to_delete, &to_delete_vec, &process_response_entry](
+                    const YAML::Node& resp_node, const std::string& dtype, const bool& is_array, uint8_t*& adr) -> void 
+        {
+            auto add_type_string = [&to_free](const std::string& tmp_string, uint8_t*& tmp_adr) -> void {
+                char *tmp_cstring = NULL;
+                if (tmp_string.size()) {
+                    tmp_cstring = (char *)strdup(tmp_string.c_str());
+                    to_free.push_back(reinterpret_cast<uint8_t *>(tmp_cstring));
+                } 
 
-                string ln_dt = service_datatype_to_ln(key);
-                //            int ln_dt_size = ln_datatype_size(ln_dt);
+                assign_to_adr(tmp_adr, (uint32_t)tmp_string.size());
+                assign_to_adr(tmp_adr, tmp_cstring);
+            };
 
-                if (ln_dt.compare("char*") == 0) {
-                    const string& tmp_string = service_response[i++];
-                    ((uint32_t *)adr)[0] = (uint32_t)tmp_string.size();
-                    adr += 4;
-                    if (tmp_string.size()) {
-                        ((const char **)adr)[0] = (const char *)strdup(tmp_string.c_str());
-                        to_free.push_back((uint8_t *)(((const char **)adr)[0]));
-                    } else 
-                        ((const char **)adr)[0] = NULL;
-                    adr += sizeof(char *);
-                } else if (starts_with(key, "vector")) {
-                    const size_t equals_idx = key.find_first_of('/');
-                    if (std::string::npos != equals_idx)
-                    {
-                        //signature "uint32_t 4 1,[uint32_t 4 1,char* 1 1]* 8 1|uint32_t 4 1,[uint32_t 4 1,char* 1 1]* 8 1"
+            auto add_type = [&](auto type_tag) {
+                using T = decltype(type_tag);
 
-                        key = key.substr(equals_idx + 1);
-                        ln_dt = service_datatype_to_ln(key);
+                if (is_array) {
+                    if (std::is_same<T, std::string>::value) {
+                        const std::vector<std::string> str_elem = resp_node.as<std::vector<std::string> >();
 
+                        struct string_vec { uint32_t len; char *str; };
+                        struct string_vec *string_entries = new struct string_vec[str_elem.size()];
+                        to_delete_vec.push_back(reinterpret_cast<uint8_t *>(string_entries));
 
-#define add_vector_type(type) \
-                        if (ln_dt.compare(#type) == 0) {                                                            \
-                            const std::vector<type>& elem = service_response[i++];                                  \
-                            ((uint32_t *)adr)[0] = (uint32_t)elem.size();                                           \
-                            adr += 4;                                                                               \
-                            type* entries = new type[elem.size()];                                                  \
-                            to_delete_vec.push_back((uint8_t *)entries);                                            \
-                            memcpy(&entries[0], &elem[0], sizeof(type) * elem.size());                              \
-                            ((type **)adr)[0] = entries;                                                            \
-                            adr += sizeof(type *);                                                                  \
-                        }
+                        uint8_t *tmp_adr = reinterpret_cast<uint8_t *>(string_entries);
+                        for (const auto& entry : str_elem) { add_type_string(entry, tmp_adr); }
 
-#define add_vector_type_char(type) \
-                        if (ln_dt.compare(#type) == 0) {                                                            \
-                            const std::vector<string>& elem = service_response[i++];                                \
-                            ((uint32_t *)adr)[0] = (uint32_t)elem.size();                                           \
-                            adr += 4;                                                                               \
-                            ln_vector_t* entries = new ln_vector_t[elem.size()];                                    \
-                            to_delete_vec.push_back((uint8_t *)entries);                                            \
-                            for (unsigned i = 0; i < elem.size(); ++i) {                                            \
-                                string entry = elem[i];                                                             \
-                                entries[i].len = entry.length();                                                    \
-                                entries[i].val = (const uint8_t *)(strdup(entry.c_str()));                          \
-                                to_free.push_back((uint8_t *)entries[i].val);                                       \
-                            }                                                                                       \
-                            ((ln_vector_t **)adr)[0] = entries;                                                     \
-                            adr += sizeof(void*);                                                                   \
-                        }
+                        assign_to_adr(adr, static_cast<uint32_t>(str_elem.size()));
+                        assign_to_adr(adr, reinterpret_cast<uint8_t *>(string_entries));
+                    } else {
+                        const std::vector<T> elem = resp_node.as<std::vector<T> >();
 
-                        add_vector_type(uint64_t)
-                        else add_vector_type(int64_t)
-                        else add_vector_type(uint32_t)
-                        else add_vector_type(int32_t)
-                        else add_vector_type(uint16_t)
-                        else add_vector_type(int16_t)
-                        else add_vector_type(uint8_t)
-                        else add_vector_type(int8_t)
-                        else add_vector_type(float)
-                        else add_vector_type(double)
-                        else add_vector_type_char(char*)
+                        T* entries = new T[elem.size()];
+                        to_delete_vec.push_back(reinterpret_cast<uint8_t *>(entries));
+
+                        std::memcpy(entries, elem.data(), sizeof(T) * elem.size());
+
+                        assign_to_adr(adr, static_cast<uint32_t>(elem.size()));
+                        assign_to_adr(adr, entries);
                     }
-                } else if (ends_with(ln_dt, string("*"))) {
-                    ((uint32_t *)adr)[0] = service_response[i++];
-                    adr += 4;
+                } else if (std::is_same<T, std::string>::value) {
+                    add_type_string(resp_node.as<string>(), adr);
+                }
+            };
 
-#define push_back_type(type) \
-                    if (ln_dt.compare(#type) == 0) {             \
-                        ((type*)adr)[0] = service_response[i++]; \
-                        adr += sizeof(type);                     \
+            std::function<size_t(const YAML::Node&)> calc_ln_size = [&calc_ln_size](const YAML::Node& dtype_node) -> size_t {
+                size_t ret = 0;
+
+                for (const auto& f : dtype_node) {
+                    const std::string& tmp_dtype = get_as<std::string>(f, "type");
+
+                    if (get_as<bool>(f, "array", false)) {
+                        ret += sizeof(uint32_t) /* size field */ + sizeof(uint8_t *) /* array data */;
+                    } else if (ln_helper::is_builtin_dtype(tmp_dtype)) {
+                        ret += ln_helper::ln_datatype_size(tmp_dtype);
+                    } else {
+                        auto tmp_dtype_desc = robotkernel::get_datatype_desc(tmp_dtype);
+                        YAML::Node tmp_dtype_node = YAML::Load(tmp_dtype_desc);
+                        ret += calc_ln_size(tmp_dtype_node);
+                    }
+                }
+
+                return ret;
+            };
+
+            // Dispatch
+            if (dtype == "uint64_t")      add_type(uint64_t{});
+            else if (dtype == "int64_t")  add_type(int64_t{});
+            else if (dtype == "uint32_t") add_type(uint32_t{});
+            else if (dtype == "int32_t")  add_type(int32_t{});
+            else if (dtype == "uint16_t") add_type(uint16_t{});
+            else if (dtype == "int16_t")  add_type(int16_t{});
+            else if (dtype == "uint8_t")  add_type(uint8_t{});
+            else if (dtype == "int8_t")   add_type(int8_t{});
+            else if (dtype == "float")    add_type(float{});
+            else if (dtype == "double")   add_type(double{});
+            else if (dtype == "string")   add_type(std::string{});
+            else { // this is a custom type 
+                auto dtype_desc = robotkernel::get_datatype_desc(dtype);
+                YAML::Node dtype_node = YAML::Load(dtype_desc);
+
+                if (is_array) {
+                    const std::vector<YAML::Node> elem = resp_node.as<std::vector<YAML::Node> >();
+
+                    size_t entry_size = calc_ln_size(dtype_node);
+                    uint8_t *entries = new uint8_t[entry_size * elem.size()];
+                    to_delete_vec.push_back(entries);
+
+                    uint8_t *tmp_adr = entries;
+                    for (const auto& entry : elem) {
+                        process_response_entry(entry, dtype, false, tmp_adr);
                     }
 
-                    push_back_type(uint64_t*)
-                    else push_back_type(int64_t*)
-                    else push_back_type(uint32_t*)
-                    else push_back_type(int32_t*)
-                    else push_back_type(uint16_t*)
-                    else push_back_type(int16_t*)
-                    else push_back_type(uint8_t*)
-                    else push_back_type(int8_t*)
-                    else push_back_type(float*)
-                    else push_back_type(double*)
+                    assign_to_adr(adr, static_cast<uint32_t>(elem.size()));
+                    assign_to_adr(adr, entries);
                 } else {
-                    push_back_type(uint64_t)
-                    else push_back_type(int64_t)
-                    else push_back_type(uint32_t)
-                    else push_back_type(int32_t)
-                    else push_back_type(uint16_t)
-                    else push_back_type(int16_t)
-                    else push_back_type(uint8_t)
-                    else push_back_type(int8_t)
-                    else push_back_type(float)
-                    else push_back_type(double)
+                    for (const auto& f : dtype_node) {
+                        string name = get_as<string>(f, "name");
+                        string dtype = get_as<string>(f, "type");
+                        bool is_array = get_as<bool>(f, "array", false);
 
-#undef push_back_type
+                        process_response_entry(service_response[name], dtype, is_array, adr);
+                    }
                 }
             }
+        };
+        
+        for (YAML::const_iterator it = response.begin(); it != response.end(); ++it) {
+            string name = get_as<string>(*it, "name");
+            string dtype = get_as<string>(*it, "type");
+            bool is_array = get_as<bool>(*it, "array", false);
+
+            process_response_entry(service_response[name], dtype, is_array, adr);
         }
     }
 
@@ -512,31 +557,46 @@ int ln_bridge::service::handle(ln::service_request& req) {
     return 0;
 }
 
+static void get_custom_dtypes(const YAML::Node& node, ln_helper::helper& h) {
+    for (const auto& e : node) {
+        // something like "{ name: myfield, dtype: uint32_t, array: true }"
+        // or             "{ name: anotherfield, dtype: mycustom }"
+        auto dtype = ::robotkernel::helpers::get_as<std::string>(e, "type");
+        if (!ln_helper::is_builtin_dtype(dtype) && (h.dt_map.find(dtype) == h.dt_map.end())) {
+            auto dtype_desc = ::robotkernel::get_datatype_desc(dtype);
+            auto dtype_node = YAML::Load(dtype_desc);
+            h.add_datatype(dtype_node);
+            get_custom_dtypes(dtype_node, h);
+        }
+    }
+}
+
 void ln_bridge::service::_create_ln_message_definition() {
-    std::stringstream ss_md, ss_signature;
-    YAML::Node message_definition = YAML::Load(_svc.service_definition);
-    ss_md << "service" << endl;
+    ln_helper::helper h;
+    YAML::Node sd_node = YAML::Load(_svc.service_definition);
 
-    if (message_definition["name"]) {
-        name = message_definition["name"].as<string>();
+    if (sd_node["name"]) {
+        name = sd_node["name"].as<string>();
     }
 
-    if (message_definition["request"]) {
-        ss_md << "request" << endl;
+    if (sd_node["request"]) get_custom_dtypes(sd_node["request"], h);
+    if (sd_node["response"]) get_custom_dtypes(sd_node["response"], h);
+    auto svc = h.add_service(sd_node);
 
-        const YAML::Node& request = message_definition["request"];
-        ln_md_helper::process_node(request, ss_md, ss_signature, sub_mds);
+    ln_helper::ln_signature_stream lnss;
+    lnss << *svc;
+    signature = lnss.str();
+
+    for (const auto& dtype : h.dt_map) {
+        ln_helper::ln_mddef_stream mdss;
+        mdss << *dtype.second;
+        sub_mds[dtype.first] = mdss.str();
     }
 
-    ss_signature << "|";
+    ln_helper::ln_mddef_stream mdss;
+    mdss << *svc;
+    md = mdss.str();
 
-    if (message_definition["response"]) {
-        ss_md << "response" << endl;
-        const YAML::Node& response = message_definition["response"];
-        ln_md_helper::process_node(response, ss_md, ss_signature, sub_mds);
-    }
-
-    signature = ss_signature.str();
-    md = ss_md.str();
+    printf("signature: %s\n\n, md:\n%s\n", signature.c_str(), md.c_str());
 }
 
