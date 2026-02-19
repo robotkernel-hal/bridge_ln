@@ -15,8 +15,8 @@ class MainProject(ConanFile):
         self.requires("robotkernel/6.0.0-yaml-service@robotkernel/snapshot")
         self.requires("libstring_util/[~1]@common/stable")
         self.requires("liblinks_and_nodes/[>=1.2.3 <3]@common/stable")
-        self.requires("robotkernel_ln_helper/6.0.0-yaml-service@robotkernel/unstable")
-    
+        self.requires("robotkernel_ln_helper/6.0.0-yaml-service@robotkernel/snapshot")
+
     def source(self):
         self.run(f"sed 's/AC_INIT(.*/AC_INIT([bridge_ln], [{self.version}], [{self.author}])/' configure.ac.in > configure.ac")
 
