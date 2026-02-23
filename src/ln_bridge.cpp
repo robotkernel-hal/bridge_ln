@@ -543,9 +543,9 @@ void ln_bridge::service::_create_ln_message_definition() {
         _clnt.log(verbose, "%s -> get_custom_dtypes\n", name.c_str());
 
         for (const auto& e : node) {
-            // something like "{ name: myfield, dtype: uint32_t, array: true }"
-            // or             "{ name: anotherfield, dtype: mycustom }"
-            auto dtype = ::robotkernel::helpers::get_as<std::string>(e, "type");
+            // something like "myfield: { type: uint32_t, array: true }"
+            // or             "anotherfield: { type: mycustom }"
+            auto dtype = ::robotkernel::helpers::get_as<std::string>(e.second, "type");
             if (!ln_helper::is_builtin_dtype(dtype) && (h.dt_map.find(dtype) == h.dt_map.end())) {
                 _clnt.log(verbose, "%s: trying to add custom dtype \"%s\"\n", name.c_str(), dtype.c_str());
 
