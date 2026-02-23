@@ -289,8 +289,9 @@ int ln_bridge::service::handle(ln::service_request& req) {
     // request arguments
     YAML::Node service_request, service_response;
 
-    YAML::Node message_definition = YAML::Load(_svc.service_definition);
-    _clnt.log(verbose, "got message definition:\n%s\n", _svc.service_definition.c_str());
+    auto svc_desc = robotkernel::get_service_definition(_svc.service_definition);
+    YAML::Node message_definition = YAML::Load(svc_desc);
+    _clnt.log(verbose, "got message definition:\n%s\n", svc_desc.c_str());
 
     if (message_definition["request"]) {
         const YAML::Node& request = message_definition["request"];
@@ -349,7 +350,7 @@ int ln_bridge::service::handle(ln::service_request& req) {
             else if (dtype == "double")   return get_type(double{});
             else if (dtype == "string")   return get_type(std::string{});
             else { // this is a custom type 
-                auto dtype_desc = robotkernel::get_datatype_desc(dtype);
+                auto dtype_desc = robotkernel::get_datatype_definition(dtype);
                 YAML::Node dtype_node = YAML::Load(dtype_desc);
                 YAML::Node fields_node = dtype_node["fields"];
 
@@ -458,7 +459,7 @@ int ln_bridge::service::handle(ln::service_request& req) {
                     } else if (ln_helper::is_builtin_dtype(tmp_dtype)) {
                         ret += ln_helper::ln_datatype_size(tmp_dtype);
                     } else {
-                        auto tmp_dtype_desc = robotkernel::get_datatype_desc(tmp_dtype);
+                        auto tmp_dtype_desc = robotkernel::get_datatype_definition(tmp_dtype);
                         YAML::Node tmp_dtype_node = YAML::Load(tmp_dtype_desc);
                         if (tmp_dtype_node["fields"]) { ret += calc_ln_size(tmp_dtype_node["fields"]); }
                     }
@@ -479,7 +480,7 @@ int ln_bridge::service::handle(ln::service_request& req) {
             else if (dtype == "double")   add_type(double{});
             else if (dtype == "string")   add_type(std::string{});
             else { // this is a custom type 
-                auto dtype_desc = robotkernel::get_datatype_desc(dtype);
+                auto dtype_desc = robotkernel::get_datatype_definition(dtype);
                 YAML::Node dtype_node = YAML::Load(dtype_desc);
                 YAML::Node fields_node = dtype_node["fields"];
 
@@ -529,12 +530,10 @@ int ln_bridge::service::handle(ln::service_request& req) {
 
 void ln_bridge::service::_create_ln_message_definition() {
     ln_helper::helper h;
-    YAML::Node sd_node = YAML::Load(_svc.service_definition);
+    auto svc_desc = robotkernel::get_service_definition(_svc.service_definition);
+    YAML::Node sd_node = YAML::Load(svc_desc);
+    name = _svc.service_definition;
 
-    if (sd_node["name"]) {
-        name = sd_node["name"].as<string>();
-    }
-    
     _clnt.log(verbose, "%s: starting creating ln message definition and signature...\n", name.c_str());
 
     std::function<void(const YAML::Node&, ln_helper::helper&)> get_custom_dtypes = 
@@ -549,7 +548,7 @@ void ln_bridge::service::_create_ln_message_definition() {
             if (!ln_helper::is_builtin_dtype(dtype) && (h.dt_map.find(dtype) == h.dt_map.end())) {
                 _clnt.log(verbose, "%s: trying to add custom dtype \"%s\"\n", name.c_str(), dtype.c_str());
 
-                auto dtype_desc = ::robotkernel::get_datatype_desc(dtype);
+                auto dtype_desc = ::robotkernel::get_datatype_definition(dtype);
                 
                 _clnt.log(verbose, "%s: got desc\n%s\n", name.c_str(), dtype_desc.c_str());
                 auto dtype_node = YAML::Load(dtype_desc);
