@@ -366,9 +366,9 @@ int ln_bridge::service::handle(ln::service_request& req) {
                 } else {
                     YAML::Node tmp_node;
                     for (const auto& f : fields_node) {
-                        string name = get_as<string>(f, "name");
-                        string dtype = get_as<string>(f, "type");
-                        bool is_array = get_as<bool>(f, "array", false);
+                        string name = f.first.as<std::string>();
+                        string dtype = get_as<string>(f.second, "type");
+                        bool is_array = get_as<bool>(f.second, "array", false);
 
                         tmp_node[name] = process_request_entry(dtype, is_array, adr);                    
                     }
@@ -380,9 +380,9 @@ int ln_bridge::service::handle(ln::service_request& req) {
         };
 
         for (YAML::const_iterator it = request.begin(); it != request.end(); ++it) {
-            string name = get_as<string>(*it, "name");
-            string dtype = get_as<string>(*it, "type");
-            bool is_array = get_as<bool>(*it, "array", false);
+            string name = it->first.as<std::string>();
+            string dtype = get_as<string>(it->second, "type");
+            bool is_array = get_as<bool>(it->second, "array", false);
 
             service_request[name] = process_request_entry(dtype, is_array, adr);
         }
@@ -499,9 +499,9 @@ int ln_bridge::service::handle(ln::service_request& req) {
                     assign_to_adr(adr, entries);
                 } else {
                     for (const auto& f : fields_node) {
-                        string name = get_as<string>(f, "name");
-                        string dtype = get_as<string>(f, "type");
-                        bool is_array = get_as<bool>(f, "array", false);
+                        string name = f.first.as<std::string>();
+                        string dtype = get_as<string>(f.second, "type");
+                        bool is_array = get_as<bool>(f.second, "array", false);
 
                         process_response_entry(resp_node[name], dtype, is_array, adr);
                     }
@@ -510,9 +510,9 @@ int ln_bridge::service::handle(ln::service_request& req) {
         };
         
         for (YAML::const_iterator it = response.begin(); it != response.end(); ++it) {
-            string name = get_as<string>(*it, "name");
-            string dtype = get_as<string>(*it, "type");
-            bool is_array = get_as<bool>(*it, "array", false);
+            string name = it->first.as<std::string>();
+            string dtype = get_as<string>(it->second, "type");
+            bool is_array = get_as<bool>(it->second, "array", false);
 
             process_response_entry(service_response[name], dtype, is_array, adr);
         }
@@ -553,7 +553,7 @@ void ln_bridge::service::_create_ln_message_definition() {
                 
                 _clnt.log(verbose, "%s: got desc\n%s\n", name.c_str(), dtype_desc.c_str());
                 auto dtype_node = YAML::Load(dtype_desc);
-                h.add_datatype(dtype_node);
+                h.add_datatype(name, dtype_node);
 
                 _clnt.log(verbose, "%s: added \"%s\", now recurse\n", name.c_str(), dtype.c_str()); 
                 if (dtype_node["fields"]) { get_custom_dtypes(dtype_node["fields"], h); }
@@ -567,7 +567,7 @@ void ln_bridge::service::_create_ln_message_definition() {
 
     _clnt.log(verbose, "%s: added all custom dtypes\n", name.c_str());
 
-    auto svc = h.add_service(sd_node);
+    auto svc = h.add_service(_svc.owner + "." + _svc.name, sd_node);
 
     _clnt.log(verbose, "%s: got our helper service\n", name.c_str());
 
