@@ -110,7 +110,7 @@ jobs:
 
           test -f configure || autoreconf -if
 
-          git clone https://github.com/robotkernel-hal/ln_helper.git
+          git clone -b release/6.0.0 https://github.com/robotkernel-hal/robotkernel_ln_helper.git
           git clone -b 2.4.4 --recurse-submodules https://gitlab.com/links_and_nodes/links_and_nodes
 
           cd links_and_nodes/libln
