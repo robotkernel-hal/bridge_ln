@@ -32,10 +32,10 @@
 #include "ln/cppwrapper.h"
 #include "robotkernel/bridge_base.h"
 
+#include <yaml-cpp/yaml.h>
+
+
 namespace ln_bridge {
-#ifdef EMACS
-}
-#endif
 
 class service;
 
@@ -122,9 +122,6 @@ class service {
         }
 };
         
-#ifdef EMACS
-{
-#endif
 }
 
 #endif

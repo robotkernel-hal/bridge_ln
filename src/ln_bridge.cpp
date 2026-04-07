@@ -300,55 +300,58 @@ int ln_bridge::service::handle(ln::service_request& req) {
             [&process_request_entry]
             (const std::string& dtype, const bool& is_array, uint8_t*& adr) -> YAML::Node 
         {
-            auto get_type_string = [](uint8_t*& adr) -> std::string {
-                uint32_t tmp_len = assign_from_adr<uint32_t>(adr);
-                char *tmp_str = assign_from_adr<char *>(adr);
-                return std::string(tmp_str, tmp_len);
-            };
-
-            auto get_type = [&](auto type_tag) -> YAML::Node {
-                using T = decltype(type_tag);
-
+            auto get_type_string = [&]() -> YAML::Node {
+                auto local_add = [](uint8_t*& adr) -> std::string {
+                    uint32_t tmp_len = assign_from_adr<uint32_t>(adr);
+                    char *tmp_str = assign_from_adr<char *>(adr);
+                    return std::string(tmp_str, tmp_len);
+                };
+                
                 if (is_array) {
-                    if (std::is_same<T, std::string>::value) {
-                        uint32_t vec_len = assign_from_adr<uint32_t>(adr);
-                        uint8_t *vec_adr = assign_from_adr<uint8_t *>(adr);
-                        std::vector<std::string> entries;
+                    uint32_t vec_len = assign_from_adr<uint32_t>(adr);
+                    uint8_t *vec_adr = assign_from_adr<uint8_t *>(adr);
+                    std::vector<std::string> entries;
 
-                        for (unsigned i = 0; i < vec_len; ++i) {
-                            entries.push_back(get_type_string(vec_adr));
-                        }
-
-                        return YAML::Node(entries);
-                    } else {
-                        uint32_t vec_len = assign_from_adr<uint32_t>(adr);
-                        uint8_t *vec_adr = assign_from_adr<uint8_t *>(adr);
-                        std::vector<T> entries;
-
-                        for (unsigned i = 0; i < vec_len; ++i) {
-                            entries.push_back(assign_from_adr<T>(vec_adr));
-                        }
-
-                        return YAML::Node(entries);
+                    for (unsigned i = 0; i < vec_len; ++i) {
+                        entries.push_back(local_add(vec_adr));
                     }
-                } else if (std::is_same<T, std::string>::value) {
-                    return YAML::Node(get_type_string(adr));
+
+                    return YAML::Node(entries);
                 } else {
-                    return YAML::Node(assign_from_adr<T>(adr));
+                    return YAML::Node(local_add(adr));
                 }
             };
 
-            if (dtype == "uint64_t")      return get_type(uint64_t{});
-            else if (dtype == "int64_t")  return get_type(int64_t{});
-            else if (dtype == "uint32_t") return get_type(uint32_t{});
-            else if (dtype == "int32_t")  return get_type(int32_t{});
-            else if (dtype == "uint16_t") return get_type(uint16_t{});
-            else if (dtype == "int16_t")  return get_type(int16_t{});
-            else if (dtype == "uint8_t")  return get_type(uint8_t{});
-            else if (dtype == "int8_t")   return get_type(int8_t{});
-            else if (dtype == "float")    return get_type(float{});
-            else if (dtype == "double")   return get_type(double{});
-            else if (dtype == "string")   return get_type(std::string{});
+            auto get_type = [&](auto from_type_tag, auto to_type_tag) -> YAML::Node {
+                using T = decltype(from_type_tag);
+                using U = decltype(to_type_tag);
+
+                if (is_array) {
+                    uint32_t vec_len = assign_from_adr<uint32_t>(adr);
+                    uint8_t *vec_adr = assign_from_adr<uint8_t *>(adr);
+                    std::vector<U> entries;
+
+                    for (unsigned i = 0; i < vec_len; ++i) {
+                        entries.push_back(static_cast<U>(assign_from_adr<T>(vec_adr)));
+                    }
+
+                    return YAML::Node(entries);
+                } else {
+                    return YAML::Node(static_cast<U>(assign_from_adr<T>(adr)));
+                }
+            };
+
+            if (dtype == "uint64_t")      return get_type(uint64_t{}, uint64_t{});
+            else if (dtype == "int64_t")  return get_type(int64_t{},  int64_t{});
+            else if (dtype == "uint32_t") return get_type(uint32_t{}, uint32_t{});
+            else if (dtype == "int32_t")  return get_type(int32_t{},  int32_t{});
+            else if (dtype == "uint16_t") return get_type(uint16_t{}, uint16_t{});
+            else if (dtype == "int16_t")  return get_type(int16_t{},  int16_t{});
+            else if (dtype == "uint8_t")  return get_type(uint8_t{},  uint16_t{}); 
+            else if (dtype == "int8_t")   return get_type(int8_t{},   int16_t{}); 
+            else if (dtype == "float")    return get_type(float{},    float{});
+            else if (dtype == "double")   return get_type(double{},   double{});
+            else if (dtype == "string")   return get_type_string();
             else { // this is a custom type 
                 auto dtype_desc = robotkernel::get_datatype_definition(dtype);
                 YAML::Node dtype_node = YAML::Load(dtype_desc);
@@ -403,48 +406,51 @@ int ln_bridge::service::handle(ln::service_request& req) {
             [&service_response, &to_free, &to_delete, &to_delete_vec, &process_response_entry](
                     const YAML::Node& resp_node, const std::string& dtype, const bool& is_array, uint8_t*& adr) -> void 
         {
-            auto add_type_string = [&to_free](const std::string& tmp_string, uint8_t*& tmp_adr) -> void {
-                char *tmp_cstring = NULL;
-                if (tmp_string.size()) {
-                    tmp_cstring = (char *)strdup(tmp_string.c_str());
-                    to_free.push_back(reinterpret_cast<uint8_t *>(tmp_cstring));
-                } 
-
-                assign_to_adr(tmp_adr, (uint32_t)tmp_string.size());
-                assign_to_adr(tmp_adr, tmp_cstring);
-            };
-
-            auto add_type = [&](auto type_tag) {
-                using T = decltype(type_tag);
+            auto add_type_string = [&]() {
+                auto local_add = [&to_free](const std::string& tmp_string, uint8_t*& tmp_adr) -> void {
+                    char *tmp_cstring = NULL;
+                    if (tmp_string.size()) {
+                        tmp_cstring = (char *)strdup(tmp_string.c_str());
+                        to_free.push_back(reinterpret_cast<uint8_t *>(tmp_cstring));
+                    } 
+    
+                    assign_to_adr(tmp_adr, (uint32_t)tmp_string.size());
+                    assign_to_adr(tmp_adr, tmp_cstring);
+                };
 
                 if (is_array) {
-                    if (std::is_same<T, std::string>::value) {
-                        const std::vector<std::string> str_elem = resp_node.as<std::vector<std::string> >();
+                    const std::vector<std::string> str_elem = resp_node.as<std::vector<std::string> >();
 
-                        struct string_vec { uint32_t len; char *str; };
-                        struct string_vec *string_entries = new struct string_vec[str_elem.size()];
-                        to_delete_vec.push_back(reinterpret_cast<uint8_t *>(string_entries));
+                    struct string_vec { uint32_t len; char *str; };
+                    struct string_vec *string_entries = new struct string_vec[str_elem.size()];
+                    to_delete_vec.push_back(reinterpret_cast<uint8_t *>(string_entries));
 
-                        uint8_t *tmp_adr = reinterpret_cast<uint8_t *>(string_entries);
-                        for (const auto& entry : str_elem) { add_type_string(entry, tmp_adr); }
+                    uint8_t *tmp_adr = reinterpret_cast<uint8_t *>(string_entries);
+                    for (const auto& entry : str_elem) { local_add(entry, tmp_adr); }
 
-                        assign_to_adr(adr, static_cast<uint32_t>(str_elem.size()));
-                        assign_to_adr(adr, reinterpret_cast<uint8_t *>(string_entries));
-                    } else {
-                        const std::vector<T> elem = resp_node.as<std::vector<T> >();
-
-                        T* entries = new T[elem.size()];
-                        to_delete_vec.push_back(reinterpret_cast<uint8_t *>(entries));
-
-                        std::memcpy(entries, elem.data(), sizeof(T) * elem.size());
-
-                        assign_to_adr(adr, static_cast<uint32_t>(elem.size()));
-                        assign_to_adr(adr, entries);
-                    }
-                } else if (std::is_same<T, std::string>::value) {
-                    add_type_string(resp_node.as<string>(), adr);
+                    assign_to_adr(adr, static_cast<uint32_t>(str_elem.size()));
+                    assign_to_adr(adr, reinterpret_cast<uint8_t *>(string_entries));
                 } else {
-                    assign_to_adr(adr, resp_node.as<T>());
+                    local_add(resp_node.as<string>(), adr);
+                }
+            };
+
+            auto add_type = [&](auto from_type_tag, auto to_type_tag) {
+                using T = decltype(from_type_tag);
+                using U = decltype(to_type_tag);
+
+                if (is_array) {
+                    const std::vector<T> elem = resp_node.as<std::vector<T> >();
+
+                    U* entries = new U[elem.size()];
+                    to_delete_vec.push_back(reinterpret_cast<uint8_t *>(entries));
+
+                    for (unsigned i = 0; i < elem.size(); ++i) { entries[i] = elem[i]; }
+
+                    assign_to_adr(adr, static_cast<uint32_t>(elem.size()));
+                    assign_to_adr(adr, entries);
+                } else {
+                    assign_to_adr(adr, static_cast<U>(resp_node.as<T>()));
                 }
             };
 
@@ -468,17 +474,17 @@ int ln_bridge::service::handle(ln::service_request& req) {
                 return ret;
             };
 
-            if (dtype == "uint64_t")      add_type(uint64_t{});
-            else if (dtype == "int64_t")  add_type(int64_t{});
-            else if (dtype == "uint32_t") add_type(uint32_t{});
-            else if (dtype == "int32_t")  add_type(int32_t{});
-            else if (dtype == "uint16_t") add_type(uint16_t{});
-            else if (dtype == "int16_t")  add_type(int16_t{});
-            else if (dtype == "uint8_t")  add_type(uint8_t{});
-            else if (dtype == "int8_t")   add_type(int8_t{});
-            else if (dtype == "float")    add_type(float{});
-            else if (dtype == "double")   add_type(double{});
-            else if (dtype == "string")   add_type(std::string{});
+            if (dtype == "uint64_t")      add_type(uint64_t{}, uint64_t{});
+            else if (dtype == "int64_t")  add_type(int64_t{},  int64_t{});
+            else if (dtype == "uint32_t") add_type(uint32_t{}, uint32_t{});
+            else if (dtype == "int32_t")  add_type(int32_t{},  int32_t{});
+            else if (dtype == "uint16_t") add_type(uint16_t{}, uint16_t{});
+            else if (dtype == "int16_t")  add_type(int16_t{},  int16_t{});
+            else if (dtype == "uint8_t")  add_type(uint16_t{}, uint8_t{});
+            else if (dtype == "int8_t")   add_type(int16_t{},  int8_t{});
+            else if (dtype == "float")    add_type(float{},    float{});
+            else if (dtype == "double")   add_type(double{},   double{});
+            else if (dtype == "string")   add_type_string();
             else { // this is a custom type 
                 auto dtype_desc = robotkernel::get_datatype_definition(dtype);
                 YAML::Node dtype_node = YAML::Load(dtype_desc);
