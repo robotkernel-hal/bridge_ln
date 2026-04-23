@@ -351,6 +351,7 @@ int ln_bridge::service::handle(ln::service_request& req) {
             else if (dtype == "int8_t")   return get_type(int8_t{},   int16_t{}); 
             else if (dtype == "float")    return get_type(float{},    float{});
             else if (dtype == "double")   return get_type(double{},   double{});
+            else if (dtype == "bool")     return get_type(uint8_t{},  bool{});
             else if (dtype == "string")   return get_type_string();
             else { // this is a custom type 
                 auto dtype_desc = robotkernel::get_datatype_definition(dtype);
@@ -484,6 +485,7 @@ int ln_bridge::service::handle(ln::service_request& req) {
             else if (dtype == "int8_t")   add_type(int16_t{},  int8_t{});
             else if (dtype == "float")    add_type(float{},    float{});
             else if (dtype == "double")   add_type(double{},   double{});
+            else if (dtype == "bool")     add_type(bool{},     uint8_t{});
             else if (dtype == "string")   add_type_string();
             else { // this is a custom type 
                 auto dtype_desc = robotkernel::get_datatype_definition(dtype);
@@ -551,7 +553,7 @@ void ln_bridge::service::_create_ln_message_definition() {
             // something like "myfield: { type: uint32_t, array: true }"
             // or             "anotherfield: { type: mycustom }"
             auto dtype = ::robotkernel::helpers::get_as<std::string>(e.second, "type");
-            if (!ln_helper::is_builtin_dtype(dtype) && (h.dt_map.find(dtype) == h.dt_map.end())) {
+            if (!ln_helper::is_builtin_dtype(dtype) && !(dtype == "bool") && (h.dt_map.find(dtype) == h.dt_map.end())) {
                 _clnt.log(verbose, "%s: trying to add custom dtype \"%s\"\n", name.c_str(), dtype.c_str());
 
                 auto dtype_desc = ::robotkernel::get_datatype_definition(dtype);
