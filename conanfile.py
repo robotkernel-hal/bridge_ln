@@ -2,7 +2,7 @@ from conan import ConanFile
 
 
 class MainProject(ConanFile):
-    python_requires = "conan_template/[~5]@robotkernel/stable"
+    python_requires = "conan_template/[~6]@robotkernel/unstable"
     python_requires_extend = "conan_template.RobotkernelConanFile"
 
     name = "bridge_ln"
@@ -17,6 +17,4 @@ class MainProject(ConanFile):
         self.requires("liblinks_and_nodes/[>=1.2.3 <3]@common/stable")
         self.requires("robotkernel_ln_helper/[~6]@robotkernel/unstable")
 
-    def source(self):
-        self.run(f"sed 's/AC_INIT(.*/AC_INIT([bridge_ln], [{self.version}], [{self.author}])/' configure.ac.in > configure.ac")
 
