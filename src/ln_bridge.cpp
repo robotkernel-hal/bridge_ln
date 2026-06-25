@@ -459,9 +459,9 @@ int ln_bridge::service::handle(ln::service_request& req) {
                 size_t ret = 0;
 
                 for (const auto& f : dtype_node) {
-                    const std::string& tmp_dtype = get_as<std::string>(f, "type");
+                    const std::string& tmp_dtype = get_as<std::string>(f.second, "type");
 
-                    if (get_as<bool>(f, "array", false) || (tmp_dtype == "string")) {
+                    if (get_as<bool>(f.second, "array", false) || (tmp_dtype == "string")) {
                         ret += sizeof(uint32_t) /* size field */ + sizeof(uint8_t *) /* array data */;
                     } else if (ln_helper::is_builtin_dtype(tmp_dtype)) {
                         ret += ln_helper::ln_datatype_size(tmp_dtype);
