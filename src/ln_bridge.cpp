@@ -560,7 +560,7 @@ void ln_bridge::service::_create_ln_message_definition() {
                 
                 _clnt.log(verbose, "%s: got desc\n%s\n", name.c_str(), dtype_desc.c_str());
                 auto dtype_node = YAML::Load(dtype_desc);
-                h.add_datatype(name, dtype_node);
+                h.add_datatype(dtype, dtype_node);
 
                 _clnt.log(verbose, "%s: added \"%s\", now recurse\n", name.c_str(), dtype.c_str()); 
                 if (dtype_node["fields"]) { get_custom_dtypes(dtype_node["fields"], h); }
