@@ -463,6 +463,8 @@ int ln_bridge::service::handle(ln::service_request& req) {
 
                     if (get_as<bool>(f.second, "array", false) || (tmp_dtype == "string")) {
                         ret += sizeof(uint32_t) /* size field */ + sizeof(uint8_t *) /* array data */;
+                    } else if (tmp_dtype == "bool") {
+                        ret += 1; // mapped as uint8_t
                     } else if (ln_helper::is_builtin_dtype(tmp_dtype)) {
                         ret += ln_helper::ln_datatype_size(tmp_dtype);
                     } else {
