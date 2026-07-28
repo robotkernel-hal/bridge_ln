@@ -30,11 +30,42 @@
 #include <algorithm>
 #include <stdexcept>
 #include <type_traits>
+#include <iostream>
+#include <sstream>
+#include <iomanip>
+#include <cstdio>
 
 #include "ln_helper/field.h"
 #include "ln_helper/datatype.h"
 #include "ln_helper/service.h"
 #include "ln_helper/helper.h"
+
+static std::string repr(const std::string& input) {
+    std::ostringstream oss;
+    for (unsigned char c : input) {
+        switch (c) {
+            case '\a': oss << "\\a"; break;
+            case '\b': oss << "\\b"; break;
+            case '\f': oss << "\\f"; break;
+            case '\n': oss << "\\n"; break;
+            case '\r': oss << "\\r"; break;
+            case '\t': oss << "\\t"; break;
+            case '\v': oss << "\\v"; break;
+            case '\\': oss << "\\\\"; break;
+            case '\'': oss << "\\'"; break;
+            case '\"': oss << "\\\""; break;
+            default:
+                if (std::isprint(c)) {
+                    oss << c;
+                } else {
+                    // Fallback to hex escape for other non-printables
+                    oss << "\\x" << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(c);
+                }
+                break;
+        }
+    }
+    return oss.str();
+}
 
 using namespace std;
 using namespace robotkernel;
@@ -82,7 +113,7 @@ ln_bridge::client::~client() {
 
 //! init method
 void ln_bridge::client::init() {
-    log(info, "starting client handler thread\n");
+    log(info, "event=client_handler_start\n");
 
     start();
 }
@@ -95,7 +126,7 @@ void ln_bridge::client::run() {
             nanosleep(&ts, NULL);
         } else {
             try {
-                log(verbose, "creating new ln client...\n");
+                log(verbose, "event=create_ln_client\n");
                 clnt = new ln::client(name, 0, NULL);
                 clnt->set_max_threads("main", 16);
 
@@ -109,7 +140,7 @@ void ln_bridge::client::run() {
                 clnt->handle_service_group_in_thread_pool(group_name.c_str(), "main");
                 pthread_mutex_unlock(&service_map_lock);
             } catch(exception& e) {
-                log(warning, "creating ln client failed: %s\n", e.what());
+                log(warning, "event=create_ln_client status=failed reason=\"%s\"\n", e.what());
 
                 sleep(1);
                 clnt = NULL;
@@ -118,18 +149,18 @@ void ln_bridge::client::run() {
     }
 }
 
-
 //! create and register ln service
 /*!
  * \param svc robotkernel service struct
  */
 void ln_bridge::client::add_service(const robotkernel::service_t& svc) {
-    log(verbose, "trying to add service \"%s.%s\"\n", svc.owner.c_str(), svc.name.c_str());
-
     ln_bridge::service *ln_svc = new ln_bridge::service(*this, svc);
 
-    log(verbose, "created ln service \"%s.%s\"\nmd:\n%s\nsignature:\n%s\n", 
-            svc.owner.c_str(), svc.name.c_str(), ln_svc->md.c_str(), ln_svc->signature.c_str());
+
+    // 2. Extract as C-string and pass to printf
+    // .str() returns std::string, .c_str() returns const char*
+    log(verbose, "event=create_ln_service svc_name=%s.%s md=\"%s\" signature=\"%s\"\n",
+            svc.owner.c_str(), svc.name.c_str(), repr(ln_svc->md).c_str(), repr(ln_svc->signature).c_str());
 
     pthread_mutex_lock(&service_map_lock);
     service_map[std::make_pair(svc.owner, svc.name)] = ln_svc;
@@ -237,7 +268,7 @@ void ln_bridge::service::register_service() {
             }
 
             if (needs_upload) {
-                _clnt.log(verbose, "putting md %s\n", svc_md_name.c_str());
+                _clnt.log(verbose, "event=put_message_definition svc_name=%s\n", svc_md_name.c_str());
                 _clnt.clnt->put_message_definition(svc_md_name, md);
 
                 _clnt.stored_mds[svc_md_name] = md;
@@ -291,7 +322,6 @@ int ln_bridge::service::handle(ln::service_request& req) {
 
     auto svc_desc = robotkernel::get_service_definition(_svc.service_definition);
     YAML::Node message_definition = YAML::Load(svc_desc);
-    _clnt.log(verbose, "got message definition:\n%s\n", svc_desc.c_str());
 
     if (message_definition["request"]) {
         const YAML::Node& request = message_definition["request"];
@@ -544,27 +574,23 @@ void ln_bridge::service::_create_ln_message_definition() {
     YAML::Node sd_node = YAML::Load(svc_desc);
     name = _svc.service_definition;
 
-    _clnt.log(verbose, "%s: starting creating ln message definition and signature...\n", name.c_str());
+    _clnt.log(verbose, "event=create_ln_md svc_nanme=%s\n", name.c_str());
 
     std::function<void(const YAML::Node&, ln_helper::helper&)> get_custom_dtypes = 
         [&](const YAML::Node& node, ln_helper::helper& h) -> void 
     {
-        _clnt.log(verbose, "%s -> get_custom_dtypes\n", name.c_str());
-
         for (const auto& e : node) {
             // something like "myfield: { type: uint32_t, array: true }"
             // or             "anotherfield: { type: mycustom }"
             auto dtype = ::robotkernel::helpers::get_as<std::string>(e.second, "type");
             if (!ln_helper::is_builtin_dtype(dtype) && !(dtype == "bool") && (h.dt_map.find(dtype) == h.dt_map.end())) {
-                _clnt.log(verbose, "%s: trying to add custom dtype \"%s\"\n", name.c_str(), dtype.c_str());
-
                 auto dtype_desc = ::robotkernel::get_datatype_definition(dtype);
                 
-                _clnt.log(verbose, "%s: got desc\n%s\n", name.c_str(), dtype_desc.c_str());
+                _clnt.log(verbose, "evenct=create_ln_md svc_name=%s custom_dype=\"%s\" custom_dtype_desc=\"%s\"\n", 
+                        name.c_str(), dtype.c_str(), dtype_desc.c_str());
                 auto dtype_node = YAML::Load(dtype_desc);
                 h.add_datatype(dtype, dtype_node);
 
-                _clnt.log(verbose, "%s: added \"%s\", now recurse\n", name.c_str(), dtype.c_str()); 
                 if (dtype_node["fields"]) { get_custom_dtypes(dtype_node["fields"], h); }
             }
         }
@@ -574,11 +600,7 @@ void ln_bridge::service::_create_ln_message_definition() {
     if (sd_node["request"]) get_custom_dtypes(sd_node["request"], h);
     if (sd_node["response"]) get_custom_dtypes(sd_node["response"], h);
 
-    _clnt.log(verbose, "%s: added all custom dtypes\n", name.c_str());
-
     auto svc = h.add_service(_svc.owner + "." + _svc.name, sd_node);
-
-    _clnt.log(verbose, "%s: got our helper service\n", name.c_str());
 
     ln_helper::ln_signature_stream lnss;
     lnss << *svc;
@@ -593,7 +615,5 @@ void ln_bridge::service::_create_ln_message_definition() {
     ln_helper::ln_mddef_stream mdss;
     mdss << *svc;
     md = mdss.str();
-
-    _clnt.log(verbose,"signature: %s\n\n, md:\n%s\n", signature.c_str(), md.c_str());
 }
 
