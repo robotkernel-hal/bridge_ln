@@ -1,3 +1,21 @@
+bridge-ln (6.0.3) unstable; urgency=low
+
+  * fix: bool type in custom dtypes
+
+ -- Robert Burger <robert.burger@dlr.de>  Tue, 28 Jul 2026 07:12:37 +0200
+
+bridge-ln (6.0.2) unstable; urgency=low
+
+  * fix: datatype parsing
+
+ -- Robert Burger <robert.burger@dlr.de>  Thu, 25 Jun 2026 10:48:50 +0200
+
+bridge-ln (6.0.1) unstable; urgency=low
+
+  * fix: add_datatype key
+
+ -- Robert Burger <robert.burger@dlr.de>  Thu, 25 Jun 2026 09:10:47 +0200
+
 bridge-ln (6.0.0) stable; urgency=low
 
   * prep: 6.0.0
